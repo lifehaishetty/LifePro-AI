@@ -1,9 +1,13 @@
 package com.lifepro.ai
 
 import android.Manifest
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.location.Location
+import android.location.LocationManager
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.os.CountDownTimer
 import android.provider.MediaStore
@@ -11,6 +15,7 @@ import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.speech.tts.TextToSpeech
+import android.speech.tts.UtteranceProgressListener
 import android.view.View
 import android.widget.Button
 import android.widget.EditText
@@ -49,6 +54,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private var speechRecognizer: SpeechRecognizer? = null
     private var textToSpeech: TextToSpeech? = null
     private var isListening = false
+    private var autoListenLoop = true // Continuous conversational mode for vision impairment
 
     // Views
     private lateinit var tvReply: TextView
@@ -77,6 +83,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         initTextToSpeech()
         initSpeechRecognizer()
         setupListeners()
+        startBackgroundProtectionService()
     }
 
     private fun initViews() {
@@ -114,7 +121,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         btnQuickCall.setOnClickListener { callEmergencyNumber("112") }
         btnCameraCheck.setOnClickListener { openFaceTimeCameraCheck() }
 
-        // Text Message Send
+        // Text Message Send (Silent mode fallback)
         btnSend.setOnClickListener {
             val userText = etMessage.text.toString().trim()
             if (userText.isNotEmpty()) {
@@ -125,7 +132,19 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     }
 
     // =========================================================================
-    // ROLE SWITCHER: User (Walking) vs Guardian (Monitoring)
+    // BACKGROUND SERVICE: Keeps app alive when screen turns off in pocket
+    // =========================================================================
+    private fun startBackgroundProtectionService() {
+        val serviceIntent = Intent(this, SafetyForegroundService::class.java)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(serviceIntent)
+        } else {
+            startService(serviceIntent)
+        }
+    }
+
+    // =========================================================================
+    // ROLE SWITCHER: User (Senior/Vision-impaired) vs Guardian (Caregiver)
     // =========================================================================
     private fun setRole(userMode: Boolean) {
         isUserMode = userMode
@@ -145,20 +164,44 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             btnRoleUser.setBackgroundColor(ContextCompat.getColor(this, R.color.background))
             btnRoleUser.setTextColor(ContextCompat.getColor(this, R.color.text_primary))
 
-            tvModeSubtitle.text = "Guardian Mode • Monitoring live safety & location"
+            val locationInfo = getLiveLocationString()
+            tvModeSubtitle.text = "Guardian Mode • Location: $locationInfo"
             tvLiveStatus.text = "● MONITORING"
             tvLiveStatus.setTextColor(ContextCompat.getColor(this, R.color.guardian_purple))
-            speakAloud("Guardian mode connected. You are now tracking live safety.")
+            speakAloud("Guardian mode connected. Current location tracked: $locationInfo")
         }
     }
 
     // =========================================================================
-    // 10-SECOND EMERGENCY SOS COUNTDOWN
+    // LIVE LOCATION TRACKING
+    // =========================================================================
+    private fun getLiveLocationString(): String {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            return "GPS permission pending"
+        }
+        val locationManager = getSystemService(Context.LOCATION_SERVICE) as? LocationManager
+        var lastLocation: Location? = null
+        try {
+            lastLocation = locationManager?.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+                ?: locationManager?.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
+        } catch (e: Exception) {
+            // Ignored
+        }
+
+        return if (lastLocation != null) {
+            "Lat: ${"%.4f".format(lastLocation.latitude)}, Lon: ${"%.4f".format(lastLocation.longitude)}"
+        } else {
+            "Locating satellite..."
+        }
+    }
+
+    // =========================================================================
+    // 10-SECOND EMERGENCY SOS COUNTDOWN (INDIAN 112)
     // =========================================================================
     private fun start10SecondSosCountdown(targetNumber: String) {
         sosTimer?.cancel()
         layoutSosCountdown.visibility = View.VISIBLE
-        speakAloud("Emergency SOS activated. Calling Indian Helpline in ten seconds. Tap cancel to abort.")
+        speakAloud("Emergency SOS activated. Calling Indian Helpline in ten seconds. Say cancel to abort.")
 
         sosTimer = object : CountDownTimer(SOS_COUNTDOWN_MS, 1000) {
             override fun onTick(millisUntilFinished: Long) {
@@ -190,14 +233,13 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED) {
             startActivity(intent)
         } else {
-            // Fallback to dialer if direct CALL_PHONE is not yet granted
             val dialIntent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$number"))
             startActivity(dialIntent)
         }
     }
 
     private fun openFaceTimeCameraCheck() {
-        speakAloud("Opening video check-in.")
+        speakAloud("Opening video check-in for guardian.")
         val intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
         try {
             startActivity(intent)
@@ -207,14 +249,14 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     }
 
     // =========================================================================
-    // VOICE ASSISTANT ("HELLO LIFE" & SPEECH RECOGNITION)
+    // VOICE ASSISTANT ("HELLO LIFE" & HANDS-FREE SPEECH RECOGNITION)
     // =========================================================================
     private fun initSpeechRecognizer() {
         if (SpeechRecognizer.isRecognitionAvailable(this)) {
             speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this).apply {
                 setRecognitionListener(object : RecognitionListener {
                     override fun onReadyForSpeech(params: Bundle?) {
-                        tvVoiceStatus.text = "🎤 Listening for speech..."
+                        tvVoiceStatus.text = "🎤 Listening for 'Hello Life'..."
                     }
                     override fun onBeginningOfSpeech() {
                         tvVoiceStatus.text = "🎤 Hearing voice..."
@@ -222,13 +264,13 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                     override fun onRmsChanged(rmsdB: Float) {}
                     override fun onBufferReceived(buffer: ByteArray?) {}
                     override fun onEndOfSpeech() {
-                        tvVoiceStatus.text = "Processing speech..."
+                        tvVoiceStatus.text = "Thinking..."
                         isListening = false
                         btnVoiceListen.text = "🎙️ Tap to Speak (or say 'Hello Life')"
                     }
                     override fun onError(error: Int) {
                         isListening = false
-                        tvVoiceStatus.text = "Say 'Hello Life' or tap the mic"
+                        tvVoiceStatus.text = "Ready. Say 'Hello Life'"
                         btnVoiceListen.text = "🎙️ Tap to Speak (or say 'Hello Life')"
                     }
                     override fun onResults(results: Bundle?) {
@@ -277,9 +319,15 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         tvReply.text = "You said: \"$text\"\n\nContacting Life Pro.AI..."
         val lower = text.toLowerCase(Locale.ROOT)
 
-        // Instant emergency shout detection (Bypasses server delay for maximum safety)
+        // Instant emergency shout detection (bypasses network lag for urgent safety)
         if (lower.contains("help") || lower.contains("ambulance") || lower.contains("save me") || lower.contains("danger")) {
             start10SecondSosCountdown("112")
+            return
+        }
+
+        // Cancel voice trigger
+        if (lower.contains("cancel") && layoutSosCountdown.visibility == View.VISIBLE) {
+            cancelSos()
             return
         }
 
@@ -293,6 +341,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private fun sendMessageToServer(message: String) {
         val jsonPayload = JSONObject().apply {
             put("message", message)
+            put("location", getLiveLocationString())
         }
 
         val requestBody = jsonPayload.toString().toRequestBody("application/json; charset=utf-8".toMediaType())
@@ -318,7 +367,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                         tvReply.text = reply
                         tvActionBadge.text = if (contact.isNotEmpty()) "[Action: $action -> $contact]" else "[Action: $action]"
 
-                        // Speak AI reply aloud so user doesn't need to look at screen
+                        // Speak AI reply aloud so vision-impaired users don't need to look at screen
                         speakAloud(reply)
 
                         // Execute requested action
@@ -339,10 +388,22 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     }
 
     // =========================================================================
-    // TEXT TO SPEECH (VOICE RESPONSES)
+    // TEXT TO SPEECH (VOICE RESPONSES WITH AUTO-RESUME LISTENING)
     // =========================================================================
     private fun initTextToSpeech() {
         textToSpeech = TextToSpeech(this, this)
+        textToSpeech?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+            override fun onStart(utteranceId: String?) {}
+            override fun onDone(utteranceId: String?) {
+                // Once speech finishes, automatically listen again for continuous conversation
+                if (autoListenLoop && isUserMode) {
+                    runOnUiThread {
+                        startVoiceListening()
+                    }
+                }
+            }
+            override fun onError(utteranceId: String?) {}
+        })
     }
 
     override fun onInit(status: Int) {
@@ -352,19 +413,23 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     }
 
     private fun speakAloud(text: String) {
-        textToSpeech?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "LIFERO_VOICE")
+        textToSpeech?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "LIFEPRO_VOICE_${System.currentTimeMillis()}")
     }
 
     // =========================================================================
     // RUNTIME PERMISSIONS
     // =========================================================================
     private fun requestAppPermissions() {
-        val permissions = arrayOf(
+        val permissions = mutableListOf(
             Manifest.permission.RECORD_AUDIO,
             Manifest.permission.CALL_PHONE,
             Manifest.permission.ACCESS_FINE_LOCATION,
             Manifest.permission.CAMERA
         )
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            permissions.add(Manifest.permission.POST_NOTIFICATIONS)
+        }
 
         val ungranted = permissions.filter {
             ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED

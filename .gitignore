@@ -1,0 +1,40 @@
+# =========================================================================
+# Life Pro.AI Chatbot - Git Ignore Rules
+# =========================================================================
+
+# Secrets and Environment Variables (NEVER commit these!)
+.env
+.env*.local
+*.pem
+*.key
+
+# Node.js
+server/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Android & Gradle
+android/.gradle/
+android/build/
+android/*/build/
+android/local.properties
+android/.idea/
+android/*.iml
+android/*/*.iml
+android/.DS_Store
+android/captures/
+android/.externalNativeBuild/
+android/.cxx/
+
+# Keystores & Signing
+*.jks
+*.keystore
+
+# Built binaries
+*.apk
+*.aab
+
+# OS files
+Thumbs.db
+.DS_Store

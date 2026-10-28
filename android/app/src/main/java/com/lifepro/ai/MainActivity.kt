@@ -31,8 +31,9 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
     // =========================================================================
     // SERVER CONFIGURATION
+    // Connected over USB cable via port reverse forwarding:
     // =========================================================================
-    private val SERVER_URL = "http://10.0.2.2:3000/api/chat"
+    private val SERVER_URL = "http://localhost:3000/api/chat"
 
     private val httpClient = OkHttpClient()
     private val PERMISSION_REQUEST_CODE = 101

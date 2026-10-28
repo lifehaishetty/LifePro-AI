@@ -1,61 +1,80 @@
-# Life Pro.AI Chatbot 🚶‍♀️🛡️
-> An AI-powered personal safety and companion assistant built for real-time protection, reassuring voice dialogue, and automated safety actions.
+# Life Pro.AI 👁️👵🛡️
+> **An AI-powered voice safety companion and guardian monitoring assistant designed specifically for visually challenged individuals and elderly citizens.**
 
 ---
 
-## 🌟 Overview
+## 💡 The Problem
 
-**Life Pro.AI** acts as your discreet, responsive guardian on your phone. Whether walking home late at night or navigating unfamiliar surroundings, Life Pro.AI listens, speaks with a human voice, and can trigger automated safety actions (like calling emergency contacts or triggering alerts) via structured AI output.
+Millions of **visually impaired individuals** and **elderly citizens** living independently face severe safety and accessibility challenges every day:
+* **Complex Touchscreens**: Navigating smartphone apps, reading small text, or dialing emergency numbers during panic is nearly impossible for someone who is visually impaired or elderly.
+* **Sudden Emergencies**: Falls, cardiac events, disorientation, or sudden medical distress require immediate assistance without needing to unlock a phone or look at a screen.
+* **Caregiver Anxiety**: Family members and guardians struggle to monitor vulnerable loved ones 24/7 while respecting their independence.
+
+---
+
+## 🌟 The Solution: Life Pro.AI
+
+**Life Pro.AI** transforms any Android phone into an **always-listening, voice-first guardian**. It eliminates the need to touch or view the screen by offering natural voice interaction, automated emergency response, and caregiver peace of mind.
+
+---
+
+## 🚀 Key Features
+
+### 1. 🎙️ 100% Voice-First Operation ("Hello Life")
+* Designed for zero-vision usage: users simply speak to the phone by saying **"Hello Life"**.
+* Every AI response is **spoken aloud** in a calm, clear human voice (powered by ElevenLabs / Text-To-Speech) so users never need to look at a display.
+
+### 2. 🚨 Automated 10-Second Emergency SOS (Indian National 112)
+* If the user falls or shouts **"Help!"**, **"Call ambulance!"**, or **"Save me!"**, the AI immediately detects the distress.
+* It speaks a **10-second voice countdown**: *"Calling Indian Helpline in 10 seconds. Say cancel to abort."*
+* If not cancelled (in case of unconsciousness or severe injury), it automatically dials **112 (Indian Emergency Helpline)**.
+
+### 3. 👥 Guardian & Caregiver Mode
+* **Dual-Role Design**:
+  * **User Mode**: Voice assistant, auto-SOS, and hands-free assistance.
+  * **Guardian Mode**: For children, doctors, or caregivers to track live GPS location and receive instant alert notifications.
+
+### 4. 📹 Remote Video Check-In ("FaceTime" for Caregivers)
+* Caregivers can initiate a quick camera check-in to visually verify that their elder parent or visually impaired family member is safe and hasn't fallen.
+
+### 5. 🧠 Intelligent Brain: NVIDIA Nemotron on Nebius
+* Powered by **`nvidia/llama-3.1-nemotron-70b-instruct`**, the assistant interprets intent, provides patient reassurance, and converts spoken phrases into phone actions:
+  ```json
+  {
+    "reply": "Emergency detected. Initiating 112 Indian SOS dispatch now.",
+    "action": "sos",
+    "contact": "112"
+  }
+  ```
 
 ---
 
 ## 🏗️ Architecture
 
 ```
-+------------------------------------+
-|         Android Phone App          |
-|      (Kotlin + OkHttp + TTS)       |
-|  - Listens, displays text & plays  |
-|  - Triggers phone actions          |
-+-----------------+------------------+
-                  |
-         HTTP JSON| (e.g. POST /api/chat)
-                  v
-+-----------------+------------------+
-|           Server (Node.js)         |
-|         (Render / Cloud Host)      |
-|  - Secures API keys                |
-|  - Manages prompts & audio streams |
-+--------+------------------+--------+
-         |                  |
-         v                  v
-+--------+---------+  +-----+----------+
-|  NVIDIA Nemotron |  |   ElevenLabs   |
-| (Nebius Factory) |  | (Rachel Voice) |
-|   - The Brain    |  |  - High Quality|
-|   - JSON Actions |  |    Voice Audio |
-+------------------+  +----------------+
++-----------------------------------------------------------+
+|              Android Phone (User / Guardian)              |
+|        - Voice-First UI (SpeechRecognizer + TTS)          |
+|        - 10-Second Auto-Dialer (Indian SOS 112)           |
+|        - Live GPS & Camera Check-in                       |
++-----------------------------+-----------------------------+
+                              |
+                     HTTP JSON| POST /api/chat
+                              v
++-----------------------------+-----------------------------+
+|                     Node.js Cloud Server                  |
+|        - Secures API Keys (Never exposed on phone)        |
+|        - Emergency Action Parser                          |
++---------------+-----------------------------+-------------+
+                |                             |
+                v                             v
++---------------+-------------+   +-----------+-------------+
+|   NVIDIA Nemotron 70B       |   |       ElevenLabs        |
+|  (Nebius Token Factory)     |   |   (Human-Realistic TTS) |
+|    - The Compassionate      |   |   - Clear voice readout |
+|      Safety Brain           |   |     for vision-impaired |
++-----------------------------+   +-------------------------+
 ```
-
----
-
-## 📋 The JSON Action Protocol
-
-Nemotron always returns a structured JSON payload so the phone knows what physical action to perform:
-
-```json
-{
-  "reply": "I am right here with you. Keep walking toward the main street.",
-  "action": "none",
-  "contact": ""
-}
-```
-
-Supported actions:
-* `none`: Normal conversation and reassurance.
-* `call`: Prepares or dials an emergency contact.
-* `sos`: Triggers emergency siren / loud alert.
-* `camera`: Prepares quick camera snapshot mode.
 
 ---
 
@@ -63,69 +82,26 @@ Supported actions:
 
 ```
 lifepro-ai/
-├── README.md               # Project documentation & Hackathon pitch
+├── README.md               # Project overview & accessibility mission
 ├── .gitignore              # Protects secrets & ignores build artifacts
 ├── server/                 # Node.js backend proxy
-│   ├── server.js           # Server with Nebius + ElevenLabs integration
-│   ├── package.json        # Server configuration & dependencies
-│   ├── .env.example        # Environment variable template
-│   └── .env                # Local secrets (NEVER committed to git)
+│   ├── server.js           # Server with Nemotron & ElevenLabs integration
+│   ├── package.json        # Configuration
+│   ├── .env.example        # Template
+│   └── .env                # Local secrets (Never committed)
 └── android/                # Native Android application
-    ├── build.gradle.kts    # Project-level Gradle build file
-    ├── settings.gradle.kts # Subproject configuration
-    └── app/                # Main Android application module
-        ├── build.gradle.kts# App-level Gradle (includes OkHttp)
-        └── src/main/
-            ├── AndroidManifest.xml # Permissions (INTERNET)
-            ├── res/
-            │   ├── layout/
-            │   │   └── activity_main.xml # Chat UI
-            │   └── values/               # Colors, Strings, Theme
-            └── java/com/lifepro/ai/
-                └── MainActivity.kt       # Network & UI controller
+    ├── build.gradle.kts
+    ├── settings.gradle.kts
+    └── app/src/main/
+        ├── AndroidManifest.xml # Permissions (Audio, Call, Location, Camera)
+        ├── res/layout/activity_main.xml # High-contrast accessible UI
+        └── java/com/lifepro/ai/
+            └── MainActivity.kt # Voice listener, SOS timer & controller
 ```
 
 ---
 
-## 🚀 Quickstart Guide
-
-### 1. Server Setup
-1. Open a terminal in `lifepro-ai/server`:
-   ```bash
-   cd server
-   ```
-2. Configure `.env` with your API keys:
-   ```env
-   PORT=3000
-   NEBIUS_API_KEY=your_nebius_api_key
-   ELEVENLABS_API_KEY=your_elevenlabs_api_key
-   ```
-3. Start the server:
-   ```bash
-   node server.js
-   ```
-
-### 2. Android App Setup
-1. Open the `lifepro-ai/android` directory in **Android Studio**.
-2. Wait for Gradle Sync to complete.
-3. Open `MainActivity.kt` and set `SERVER_URL` to your server's address:
-   * **Real phone on local Wi-Fi**: `http://<YOUR_COMPUTER_IP>:3000/api/chat`
-   * **Android Emulator**: `http://10.0.2.2:3000/api/chat`
-   * **Deployed Render URL**: `https://<YOUR_APP_NAME>.onrender.com/api/chat`
-4. Connect your phone via USB (with **USB Debugging** enabled) and press **Run ▶️**.
-
----
-
-## 🗺️ Hackathon Roadmap
-- [x] **Phase 1**: Backend architecture & secure API proxy design.
-- [x] **Phase 2**: Text input UI, network layer, and live AI response rendering.
-- [ ] **Phase 3**: ElevenLabs realistic audio streaming integration on Android.
-- [ ] **Phase 4**: Voice input (Speech-to-Text) with continuous listening.
-- [ ] **Phase 5**: Background foreground service for screen-off protection.
-- [ ] **Phase 6**: Action executor (auto-dial emergency contact, SOS alerts).
-
----
-
-## 🔒 Security Best Practices
-* **No API keys on the client**: All secret keys remain strictly on the server.
-* **CORS & Cleartext rules**: Configured for seamless development testing and production SSL.
+## 🔒 Safety & Privacy
+* **Zero Client Keys**: All API credentials stay encrypted on the backend.
+* **False-Alarm Protection**: 10-second audible countdown stops accidental 112 calls.
+* **Discreet Fallback**: Large high-contrast buttons and silent text input for situations where speech is unsafe.

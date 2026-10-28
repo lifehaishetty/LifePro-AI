@@ -19,6 +19,7 @@ if (fs.existsSync(envPath)) {
 
 const PORT = process.env.PORT || 3000;
 const NEBIUS_API_KEY = process.env.NEBIUS_API_KEY || "";
+const NEMOTRON_MODEL = process.env.NEMOTRON_MODEL || "nvidia/llama-3.1-nemotron-70b-instruct";
 
 const server = http.createServer(async (req, res) => {
   // Allow all origins (CORS) so the phone app can connect
@@ -77,7 +78,7 @@ const server = http.createServer(async (req, res) => {
             "Authorization": `Bearer ${NEBIUS_API_KEY}`
           },
           body: JSON.stringify({
-            model: "nvidia/nemotron-4-340b-instruct",
+            model: NEMOTRON_MODEL,
             messages: [
               {
                 role: "system",
@@ -146,6 +147,7 @@ Do not include markdown codeblocks. Return only raw JSON.`
 server.listen(PORT, "0.0.0.0", () => {
   console.log("==================================================");
   console.log(` Life Pro.AI Server running on port ${PORT}`);
+  console.log(` Active Nemotron Model: ${NEMOTRON_MODEL}`);
   console.log(` Health check: http://localhost:${PORT}/health`);
   console.log(` Chat endpoint: http://localhost:${PORT}/api/chat`);
   console.log("==================================================");

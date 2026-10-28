@@ -1,110 +1,276 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
     android:background="@color/background"
-    android:padding="20dp">
+    android:fillViewport="true">
 
-    <!-- Header -->
-    <TextView
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Life Pro.AI Chatbot"
-        android:textSize="24sp"
-        android:textStyle="bold"
-        android:textColor="@color/primary"
-        android:layout_marginTop="12dp"
-        android:layout_marginBottom="4dp" />
+        android:orientation="vertical"
+        android:padding="16dp">
 
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Powered by NVIDIA Nemotron • Safe Walk Assistant"
-        android:textSize="13sp"
-        android:textColor="@color/text_secondary"
-        android:layout_marginBottom="20dp" />
-
-    <!-- Chat Output Section -->
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Assistant Response:"
-        android:textSize="14sp"
-        android:textStyle="bold"
-        android:textColor="@color/text_primary"
-        android:layout_marginBottom="6dp" />
-
-    <ScrollView
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:background="@color/card_bg"
-        android:padding="16dp"
-        android:layout_marginBottom="16dp">
-
+        <!-- Header -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical">
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="12dp">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Life Pro.AI"
+                    android:textSize="24sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/primary" />
+
+                <TextView
+                    android:id="@+id/tvModeSubtitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="User Mode • Say 'Hello Life'"
+                    android:textSize="12sp"
+                    android:textColor="@color/text_secondary" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/tvLiveStatus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/badge_bg"
+                android:paddingHorizontal="10dp"
+                android:paddingVertical="4dp"
+                android:text="● PROTECTED"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:textColor="@color/accent" />
+        </LinearLayout>
+
+        <!-- Role Selector: User vs Guardian -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="44dp"
+            android:orientation="horizontal"
+            android:background="@color/card_bg"
+            android:padding="3dp"
+            android:layout_marginBottom="14dp">
+
+            <Button
+                android:id="@+id/btnRoleUser"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:backgroundTint="@color/primary"
+                android:text="I am User"
+                android:textAllCaps="false"
+                android:textSize="13sp"
+                android:textColor="#FFFFFF" />
+
+            <Button
+                android:id="@+id/btnRoleGuardian"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:backgroundTint="@color/background"
+                android:text="I am Guardian"
+                android:textAllCaps="false"
+                android:textSize="13sp"
+                android:textColor="@color/text_primary" />
+        </LinearLayout>
+
+        <!-- 10-Second SOS Countdown Alert Card (Visible when SOS triggers) -->
+        <LinearLayout
+            android:id="@+id/layoutSosCountdown"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@color/sos_red_dark"
+            android:padding="16dp"
+            android:layout_marginBottom="14dp"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="EMERGENCY SOS IN PROGRESS"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:textColor="#FFFFFF" />
+
+            <TextView
+                android:id="@+id/tvCountdown"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Calling 112 Indian SOS in 10s..."
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:textColor="#FEF08A"
+                android:layout_marginVertical="8dp" />
+
+            <Button
+                android:id="@+id/btnCancelSos"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:backgroundTint="#FFFFFF"
+                android:text="CANCEL SOS (False Alarm)"
+                android:textColor="@color/sos_red_dark"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <!-- Instant SOS Button (One-tap Indian 112) -->
+        <Button
+            android:id="@+id/btnTriggerSos"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:backgroundTint="@color/sos_red"
+            android:text="🚨 TRIGGER 112 INDIAN SOS"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="#FFFFFF"
+            android:layout_marginBottom="14dp" />
+
+        <!-- AI Assistant Conversation Card -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@color/card_bg"
+            android:padding="14dp"
+            android:layout_marginBottom="14dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="8dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="AI Safety Assistant"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/text_primary" />
+
+                <TextView
+                    android:id="@+id/tvActionBadge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="[Action: none]"
+                    android:textSize="11sp"
+                    android:textColor="@color/primary"
+                    android:textStyle="bold" />
+            </LinearLayout>
 
             <TextView
                 android:id="@+id/tvReply"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Hi, I am Life Pro AI. Type a message below and tap Send to test."
-                android:textSize="16sp"
+                android:minHeight="60dp"
+                android:text="Ready. Say 'Hello Life' or shout 'Help' for Indian SOS."
+                android:textSize="15sp"
                 android:textColor="@color/text_primary"
-                android:lineSpacingExtra="4dp" />
+                android:lineSpacingExtra="3dp" />
 
             <TextView
-                android:id="@+id/tvAction"
+                android:id="@+id/tvVoiceStatus"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:text="[Action: none]"
+                android:layout_marginTop="8dp"
+                android:text="🎤 Mic listening for 'Hello Life'..."
                 android:textSize="12sp"
-                android:textStyle="bold"
-                android:textColor="@color/primary" />
+                android:textColor="@color/accent"
+                android:textStyle="bold" />
         </LinearLayout>
-    </ScrollView>
 
-    <!-- Status indicator -->
-    <TextView
-        android:id="@+id/tvStatus"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text=""
-        android:textSize="12sp"
-        android:textColor="@color/text_secondary"
-        android:layout_marginBottom="6dp" />
+        <!-- Quick Action Buttons -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="14dp">
 
-    <!-- Input Box and Send Button -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal">
+            <Button
+                android:id="@+id/btnQuickCall"
+                android:layout_width="0dp"
+                android:layout_height="50dp"
+                android:layout_weight="1"
+                android:layout_marginEnd="6dp"
+                android:backgroundTint="@color/card_bg"
+                android:text="📞 Call Contact"
+                android:textColor="@color/text_primary"
+                android:textSize="13sp" />
 
-        <EditText
-            android:id="@+id/etMessage"
-            android:layout_width="0dp"
-            android:layout_height="50dp"
-            android:layout_weight="1"
-            android:background="@color/card_bg"
-            android:hint="Type your message..."
-            android:inputType="textCapSentences"
-            android:paddingHorizontal="14dp"
-            android:textSize="15sp"
-            android:textColor="@color/text_primary" />
+            <Button
+                android:id="@+id/btnCameraCheck"
+                android:layout_width="0dp"
+                android:layout_height="50dp"
+                android:layout_weight="1"
+                android:layout_marginStart="6dp"
+                android:backgroundTint="@color/card_bg"
+                android:text="📹 FaceTime Check"
+                android:textColor="@color/text_primary"
+                android:textSize="13sp" />
+        </LinearLayout>
 
+        <!-- Voice Activation Big Button -->
         <Button
-            android:id="@+id/btnSend"
-            android:layout_width="wrap_content"
+            android:id="@+id/btnVoiceListen"
+            android:layout_width="match_parent"
             android:layout_height="50dp"
-            android:layout_marginStart="8dp"
             android:backgroundTint="@color/primary"
-            android:text="Send"
-            android:textColor="#FFFFFF" />
-    </LinearLayout>
+            android:text="🎙️ Tap to Speak (or say 'Hello Life')"
+            android:textColor="#FFFFFF"
+            android:textSize="14sp"
+            android:layout_marginBottom="14dp" />
 
-</LinearLayout>
+        <!-- Silent Mode: Text fallback -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Silent Mode (Type discreetly if unsafe to speak):"
+            android:textSize="11sp"
+            android:textColor="@color/text_secondary"
+            android:layout_marginBottom="4dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <EditText
+                android:id="@+id/etMessage"
+                android:layout_width="0dp"
+                android:layout_height="46dp"
+                android:layout_weight="1"
+                android:background="@color/card_bg"
+                android:hint="Type message or 'call Rahul'..."
+                android:inputType="textCapSentences"
+                android:paddingHorizontal="12dp"
+                android:textSize="14sp"
+                android:textColor="@color/text_primary" />
+
+            <Button
+                android:id="@+id/btnSend"
+                android:layout_width="wrap_content"
+                android:layout_height="46dp"
+                android:layout_marginStart="8dp"
+                android:backgroundTint="@color/primary"
+                android:text="Send"
+                android:textColor="#FFFFFF" />
+        </LinearLayout>
+
+    </LinearLayout>
+</ScrollView>

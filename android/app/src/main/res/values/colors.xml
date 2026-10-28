@@ -3,6 +3,9 @@
     <color name="primary">#2563EB</color>
     <color name="primary_dark">#1D4ED8</color>
     <color name="accent">#10B981</color>
+    <color name="sos_red">#DC2626</color>
+    <color name="sos_red_dark">#991B1B</color>
+    <color name="guardian_purple">#7C3AED</color>
     <color name="background">#F8FAFC</color>
     <color name="card_bg">#FFFFFF</color>
     <color name="text_primary">#0F172A</color>

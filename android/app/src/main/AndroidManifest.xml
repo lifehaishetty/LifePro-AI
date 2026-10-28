@@ -1,8 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Permission to communicate with the Life Pro AI server -->
+    <!-- Internet for Nemotron AI communication -->
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- Microphone for "Hello Life" wake word and voice commands -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
+    <!-- Phone calls for 112 Indian SOS and emergency contact calling -->
+    <uses-permission android:name="android.permission.CALL_PHONE" />
+
+    <!-- Location for guardian live tracking during SOS -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+
+    <!-- Camera for video check-in and guardian view -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
 
     <application
         android:allowBackup="true"

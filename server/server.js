@@ -58,13 +58,31 @@ const server = http.createServer(async (req, res) => {
         const userMessage = payload.message || "";
         console.log(`[Life Pro.AI] Received message from phone: "${userMessage}"`);
 
-        // If no live Nebius key is set yet, provide a test simulated reply
+        // If no live Nebius key is set yet, provide an intelligent test simulated reply
         if (!NEBIUS_API_KEY || NEBIUS_API_KEY === "YOUR_NEBIUS_API_KEY_HERE") {
-          console.log("[Life Pro.AI] Returning test simulation reply (add NEBIUS_API_KEY to .env for live Nemotron)");
+          console.log("[Life Pro.AI] Returning smart simulation reply (add NEBIUS_API_KEY to .env for live Nemotron)");
+          const lower = userMessage.toLowerCase();
+          let mockAction = "none";
+          let mockContact = "";
+          let mockReply = `I hear you loud and clear: "${userMessage}". I'm right here with you.`;
+
+          if (lower.includes("help") || lower.includes("ambulance") || lower.includes("emergency") || lower.includes("danger") || lower.includes("police")) {
+            mockAction = "sos";
+            mockContact = "112";
+            mockReply = "Emergency detected! Initiating 112 Indian SOS dispatch now.";
+          } else if (lower.includes("call")) {
+            mockAction = "call";
+            mockContact = userMessage.replace(/call/i, "").trim() || "Emergency Contact";
+            mockReply = `Calling ${mockContact} immediately.`;
+          } else if (lower.includes("camera") || lower.includes("video")) {
+            mockAction = "camera";
+            mockReply = "Opening live video feed for guardian check-in.";
+          }
+
           const mockResponse = {
-            reply: `Hello from Life Pro.AI! I received your message: "${userMessage}". You are connected successfully!`,
-            action: "none",
-            contact: ""
+            reply: mockReply,
+            action: mockAction,
+            contact: mockContact
           };
           res.writeHead(200, { "Content-Type": "application/json" });
           return res.end(JSON.stringify(mockResponse));
@@ -82,14 +100,31 @@ const server = http.createServer(async (req, res) => {
             messages: [
               {
                 role: "system",
-                content: `You are Life Pro AI, an intelligent personal safety assistant. 
+                content: `You are Life Pro AI, a fast and responsive personal safety and emergency assistant.
 Always respond strictly with a valid JSON object matching this schema:
 {
-  "reply": "your calm, reassuring response",
-  "action": "none|call|sos|camera",
+  "reply": "Your brief, calm, and direct response",
+  "action": "none|call|sos|camera|location",
   "contact": ""
 }
-Do not include markdown codeblocks. Return only raw JSON.`
+
+ACTION RULES:
+1. If the user shouts or mentions "help", "emergency", "save me", "call ambulance", "danger", or "call police":
+   - Set "action": "sos"
+   - Set "contact": "112" (Indian national all-in-one emergency number covering Police, Fire, and Ambulance).
+   - Reply reassuringly that emergency SOS is triggered.
+2. If the user asks to call someone (e.g. "call mom", "call rahul", "call 9876543210"):
+   - Set "action": "call"
+   - Set "contact": extract the name or phone number requested.
+3. If the user asks for camera/video or guardian video check:
+   - Set "action": "camera"
+4. If the user asks for location or tracking:
+   - Set "action": "location"
+5. For casual greetings like "hello life", "how are you", or walking chatter:
+   - Set "action": "none"
+   - Keep replies short, reassuring, and conversational.
+
+Do not include markdown codeblocks or extra text. Return only raw JSON.`
               },
               { role: "user", content: userMessage }
             ],

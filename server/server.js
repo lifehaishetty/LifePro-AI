@@ -47,10 +47,11 @@ const server = http.createServer(async (req, res) => {
   }
 
   // Serve landing page at / and /index.html
-  if (req.method === "GET" && (req.url === "/" || req.url === "/index.html")) {
+  if ((req.method === "GET" || req.method === "HEAD") && (req.url === "/" || req.url === "/index.html")) {
     const htmlPath = findFile("index.html");
     if (htmlPath) {
       res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+      if (req.method === "HEAD") return res.end();
       return fs.createReadStream(htmlPath).pipe(res);
     }
     // Fallback if index.html cannot be read
@@ -59,7 +60,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   // Serve direct APK download
-  if (req.method === "GET" && (req.url === "/LifePro-AI.apk" || req.url === "/download")) {
+  if ((req.method === "GET" || req.method === "HEAD") && (req.url === "/LifePro-AI.apk" || req.url === "/download")) {
     const apkPath = findFile("LifePro-AI.apk");
     if (apkPath) {
       const stat = fs.statSync(apkPath);
@@ -68,6 +69,7 @@ const server = http.createServer(async (req, res) => {
         "Content-Disposition": 'attachment; filename="LifePro-AI.apk"',
         "Content-Length": stat.size
       });
+      if (req.method === "HEAD") return res.end();
       return fs.createReadStream(apkPath).pipe(res);
     }
     // Redirect to GitHub release if local APK not found
@@ -78,7 +80,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   // Health check endpoint
-  if (req.method === "GET" && (req.url === "/health" || req.url === "/api/health")) {
+  if ((req.method === "GET" || req.method === "HEAD") && (req.url === "/health" || req.url === "/api/health")) {
     res.writeHead(200, { "Content-Type": "application/json" });
     return res.end(
       JSON.stringify({

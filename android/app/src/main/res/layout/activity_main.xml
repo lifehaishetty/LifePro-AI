@@ -125,6 +125,8 @@
                             android:textSize="22sp"
                             android:textStyle="bold"
                             android:textColor="#FEF08A"
+                            android:accessibilityLiveRegion="assertive"
+                            android:importantForAccessibility="yes"
                             android:layout_marginVertical="10dp" />
 
                         <com.google.android.material.button.MaterialButton
@@ -136,6 +138,7 @@
                             android:textColor="@color/red_emergency"
                             android:textSize="15sp"
                             android:textStyle="bold"
+                            android:contentDescription="Cancel emergency countdown. Double tap to abort call."
                             app:cornerRadius="12dp" />
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
@@ -149,6 +152,7 @@
                     android:text="🚨 TRIGGER 112 EMERGENCY SOS"
                     android:textSize="16sp"
                     android:letterSpacing="0.02"
+                    android:contentDescription="Emergency SOS Button. Double tap to immediately start emergency helpline countdown."
                     android:layout_marginBottom="20dp" />
 
                 <!-- Conversational AI Assistant Card -->
@@ -173,6 +177,7 @@
                             android:background="@drawable/bg_orb_violet"
                             android:clickable="true"
                             android:focusable="true"
+                            android:contentDescription="Voice Assistant Listening Orb. Tap to start speaking or say Hello Life."
                             android:layout_marginBottom="16dp">
 
                             <ImageView
@@ -193,6 +198,7 @@
                             android:textSize="13sp"
                             android:textColor="@color/violet_light"
                             android:textStyle="bold"
+                            android:accessibilityLiveRegion="polite"
                             android:layout_marginBottom="12dp" />
 
                         <TextView
@@ -205,6 +211,7 @@
                             android:textColor="@color/text_title"
                             android:lineSpacingExtra="4dp"
                             android:gravity="center"
+                            android:accessibilityLiveRegion="polite"
                             android:layout_marginBottom="14dp" />
 
                         <com.google.android.material.button.MaterialButton
@@ -808,6 +815,210 @@
                             android:layout_height="48dp"
                             style="@style/Widget.LifePro.Button.Secondary"
                             android:text="Verify &amp; Request All Permissions" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- Safety Controls & Simulation Mode Card -->
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    style="@style/Widget.LifePro.Card.Violet"
+                    android:layout_marginBottom="16dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="18dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="SAFETY CONTROLS &amp; SIMULATION"
+                            android:textSize="11sp"
+                            android:textColor="@color/violet_light"
+                            android:textStyle="bold"
+                            android:letterSpacing="0.08"
+                            android:layout_marginBottom="12dp" />
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:layout_marginBottom="8dp">
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:orientation="vertical">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Safe Simulation / Test Mode"
+                                    android:textSize="15sp"
+                                    android:textStyle="bold"
+                                    android:textColor="@color/text_title" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Tests countdown fully without placing actual 112 phone calls."
+                                    android:textSize="12sp"
+                                    android:textColor="@color/text_muted" />
+                            </LinearLayout>
+
+                            <androidx.appcompat.widget.SwitchCompat
+                                android:id="@+id/switchSimulationMode"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:contentDescription="Toggle safe simulation mode" />
+                        </LinearLayout>
+
+                        <View
+                            android:layout_width="match_parent"
+                            android:layout_height="1dp"
+                            android:background="@color/border_subtle"
+                            android:layout_marginVertical="10dp" />
+
+                        <TextView
+                            android:id="@+id/tvCountdownDurationLabel"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="SOS Countdown Buffer: 10 seconds"
+                            android:textSize="14sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/text_title"
+                            android:layout_marginBottom="8dp" />
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal">
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnDuration10s"
+                                android:layout_width="0dp"
+                                android:layout_height="40dp"
+                                android:layout_weight="1"
+                                style="@style/Widget.LifePro.Button.Secondary"
+                                android:text="10s"
+                                android:textSize="12sp"
+                                android:layout_marginEnd="4dp" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnDuration15s"
+                                android:layout_width="0dp"
+                                android:layout_height="40dp"
+                                android:layout_weight="1"
+                                style="@style/Widget.LifePro.Button.Secondary"
+                                android:text="15s"
+                                android:textSize="12sp"
+                                android:layout_marginEnd="4dp" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnDuration20s"
+                                android:layout_width="0dp"
+                                android:layout_height="40dp"
+                                android:layout_weight="1"
+                                style="@style/Widget.LifePro.Button.Secondary"
+                                android:text="20s"
+                                android:textSize="12sp"
+                                android:layout_marginEnd="4dp" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnDuration30s"
+                                android:layout_width="0dp"
+                                android:layout_height="40dp"
+                                android:layout_weight="1"
+                                style="@style/Widget.LifePro.Button.Secondary"
+                                android:text="30s"
+                                android:textSize="12sp" />
+                        </LinearLayout>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- Battery Optimization & Background Reliability Card -->
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    style="@style/Widget.LifePro.Card"
+                    android:layout_marginBottom="16dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="18dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="BACKGROUND RELIABILITY"
+                            android:textSize="11sp"
+                            android:textColor="@color/text_dim"
+                            android:textStyle="bold"
+                            android:letterSpacing="0.08"
+                            android:layout_marginBottom="8dp" />
+
+                        <TextView
+                            android:id="@+id/tvBatteryStatus"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="🔋 Battery Optimization: Active"
+                            android:textSize="14sp"
+                            android:textColor="@color/text_title"
+                            android:layout_marginBottom="4dp" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="To keep voice monitoring active when the screen turns off, exclude LifePro from Android battery killers."
+                            android:textSize="12sp"
+                            android:textColor="@color/text_muted"
+                            android:layout_marginBottom="12dp" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnBatteryOptimization"
+                            android:layout_width="match_parent"
+                            android:layout_height="48dp"
+                            style="@style/Widget.LifePro.Button.Secondary"
+                            android:text="Exclude from Battery Optimizations" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- Medical & Safety Disclaimer Card -->
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    style="@style/Widget.LifePro.Card"
+                    android:layout_marginBottom="16dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="18dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="⚠️ MEDICAL &amp; SAFETY DISCLAIMER"
+                            android:textSize="11sp"
+                            android:textColor="@color/amber_warning"
+                            android:textStyle="bold"
+                            android:letterSpacing="0.08"
+                            android:layout_marginBottom="8dp" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="LifePro-AI is an assistive technology designed to facilitate emergency outreach. It is NOT a certified medical diagnostic device. It does not replace professional emergency services or caregiver supervision. Not every fall, injury, or vocal distress may be detected due to ambient noise, hardware limitations, or network factors."
+                            android:textSize="12sp"
+                            android:textColor="@color/text_body"
+                            android:lineSpacingExtra="3dp" />
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 

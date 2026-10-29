@@ -36,6 +36,16 @@ data class LocationReport(
             "Coordinates Unavailable"
         }
     }
+
+    fun getDetailedCoordinates(): String {
+        return if (status == LocationStatus.LIVE_GPS || status == LocationStatus.STALE_CACHED) {
+            val timeStr = java.text.SimpleDateFormat("h:mm:ss a", java.util.Locale.getDefault()).format(java.util.Date(timestamp))
+            val accStr = if (accuracy > 0) " (±${accuracy.toInt()}m accuracy)" else ""
+            "${"%.4f".format(latitude)}° N, ${"%.4f".format(longitude)}° E$accStr at $timeStr"
+        } else {
+            "Location unavailable (Status: ${status.name})"
+        }
+    }
 }
 
 class LocationService private constructor(private val context: Context) : LocationListener {
@@ -101,13 +111,33 @@ class LocationService private constructor(private val context: Context) : Locati
     fun createWhatsAppShareIntent(recipientName: String = "Guardian"): Intent {
         val report = refreshLocation()
         val mapsUrl = report.getGoogleMapsUrl()
-        val message = "🚨 Emergency / Safety Location Update from LifePro-AI for $recipientName:\nLive GPS Coordinates: ${report.getReadableCoordinates()}\nOpen on Google Maps: $mapsUrl"
+        val message = "🚨 Emergency / Safety Location Update from LifePro-AI for $recipientName:\nLive GPS Coordinates: ${report.getDetailedCoordinates()}\nOpen on Google Maps: $mapsUrl"
 
-        return Intent(Intent.ACTION_SEND).apply {
+        val waIntent = Intent(Intent.ACTION_SEND).apply {
             type = "text/plain"
             putExtra(Intent.EXTRA_TEXT, message)
             setPackage("com.whatsapp")
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+
+        // Verify if WhatsApp is installed; if not, return open chooser for SMS/Telegram/Mail
+        val canHandleWa = try {
+            context.packageManager.resolveActivity(waIntent, 0) != null
+        } catch (e: Exception) {
+            false
+        }
+
+        return if (canHandleWa) {
+            waIntent
+        } else {
+            val generalIntent = Intent(Intent.ACTION_SEND).apply {
+                type = "text/plain"
+                putExtra(Intent.EXTRA_TEXT, message)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            Intent.createChooser(generalIntent, "Share Emergency Location via...").apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
         }
     }
 

@@ -3,6 +3,7 @@ package com.lifepro.ai.emergency
 import android.Manifest
 import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.CountDownTimer
@@ -23,8 +24,8 @@ class SosController(
     private val speakCallback: (String) -> Unit
 ) {
 
+    private val prefs: SharedPreferences = context.getSharedPreferences("lifepro_sos_prefs", Context.MODE_PRIVATE)
     private var sosTimer: CountDownTimer? = null
-    private val SOS_DURATION_MS = 10000L // 10 seconds
     private val activityRepo = ActivityRepository.getInstance(context)
     private val contactManager = ContactManager.getInstance(context)
 
@@ -33,27 +34,77 @@ class SosController(
     var currentTarget = "112"
         private set
 
-    fun start10SecondSos(targetNumber: String = "112", callback: SosCallback? = null) {
-        if (isCountdownActive) return // Prevent duplicate countdowns
+    // Configurable countdown duration (default 10s, adjustable to 5, 10, 15, 20, 30s)
+    var countdownDurationSeconds: Int
+        get() = prefs.getInt("countdown_duration_seconds", 10)
+        set(value) {
+            prefs.edit().putInt("countdown_duration_seconds", value.coerceIn(5, 60)).apply()
+        }
 
-        currentTarget = targetNumber
+    // Controlled simulation / test mode toggle
+    var isSimulationMode: Boolean
+        get() = prefs.getBoolean("is_simulation_mode", false)
+        set(value) {
+            prefs.edit().putBoolean("is_simulation_mode", value).apply()
+        }
+
+    // Configurable emergency helpline (default 112, can be customized e.g. 911, 999)
+    var emergencyHelplineNumber: String
+        get() = prefs.getString("emergency_helpline_number", "112") ?: "112"
+        set(value) {
+            prefs.edit().putString("emergency_helpline_number", value.trim()).apply()
+        }
+
+    // Duplicate-event debouncing protection
+    private var lastTriggerTimestamp = 0L
+    private val DEBOUNCE_COOLDOWN_MS = 4000L
+
+    /**
+     * Backward-compatible alias for existing callers.
+     */
+    fun start10SecondSos(targetNumber: String = emergencyHelplineNumber, callback: SosCallback? = null) {
+        startSosCountdown(targetNumber, callback)
+    }
+
+    /**
+     * Initiates the emergency SOS countdown with configurable duration and duplicate protection.
+     */
+    fun startSosCountdown(targetNumber: String = emergencyHelplineNumber, callback: SosCallback? = null) {
+        val now = System.currentTimeMillis()
+        if (isCountdownActive) return // Already running
+
+        if (now - lastTriggerTimestamp < DEBOUNCE_COOLDOWN_MS) {
+            // Duplicate event within cooldown window suppressed
+            return
+        }
+        lastTriggerTimestamp = now
+
+        currentTarget = if (targetNumber.isNotEmpty()) targetNumber else emergencyHelplineNumber
         isCountdownActive = true
+
+        val totalDurationMs = countdownDurationSeconds * 1000L
 
         activityRepo.logEvent(
             EventType.SOS_TRIGGERED,
-            "10s Emergency SOS Activated",
-            "Target: $targetNumber. 10-second false alarm countdown initiated.",
+            if (isSimulationMode) "Simulation SOS Activated" else "${countdownDurationSeconds}s Emergency SOS Activated",
+            if (isSimulationMode) "Controlled test mode active. No live emergency call will be placed."
+            else "Target: $currentTarget. False alarm buffer: ${countdownDurationSeconds}s.",
             EventOutcome.ACTIVE
         )
 
-        speakCallback("Emergency SOS activated. Calling emergency helpline in ten seconds. Say cancel to abort.")
+        val spokenWarning = if (isSimulationMode) {
+            "Simulation mode activated. Testing emergency sequence for $currentTarget in $countdownDurationSeconds seconds. Say cancel to abort."
+        } else {
+            "Emergency SOS activated. Calling emergency helpline in $countdownDurationSeconds seconds. Say cancel to abort."
+        }
+        speakCallback(spokenWarning)
 
         sosTimer?.cancel()
-        sosTimer = object : CountDownTimer(SOS_DURATION_MS, 1000) {
+        sosTimer = object : CountDownTimer(totalDurationMs, 1000) {
             override fun onTick(millisUntilFinished: Long) {
                 val seconds = (millisUntilFinished / 1000) + 1
                 callback?.onCountdownTick(seconds, currentTarget)
-                if (seconds == 5L) {
+                if (seconds == 5L && countdownDurationSeconds > 5) {
                     speakCallback("Five seconds remaining.")
                 }
             }
@@ -61,14 +112,25 @@ class SosController(
             override fun onFinish() {
                 isCountdownActive = false
                 callback?.onCountdownFinished(currentTarget)
-                speakCallback("Connecting emergency call to $currentTarget now.")
-                executeCall(currentTarget)
-                activityRepo.logEvent(
-                    EventType.CALL_ATTEMPT,
-                    "Emergency Call Dispatched",
-                    "Dispatched call to $currentTarget after 10s countdown completed.",
-                    EventOutcome.SUCCESS
-                )
+
+                if (isSimulationMode) {
+                    speakCallback("Simulation mode: Emergency countdown completed successfully. No actual phone call was placed.")
+                    activityRepo.logEvent(
+                        EventType.CALL_ATTEMPT,
+                        "Simulation Test Completed",
+                        "Simulated dispatch for $currentTarget completed safely without dialing.",
+                        EventOutcome.SIMULATION
+                    )
+                } else {
+                    speakCallback("Connecting emergency call to $currentTarget now.")
+                    executeCall(currentTarget)
+                    activityRepo.logEvent(
+                        EventType.CALL_ATTEMPT,
+                        "Emergency Call Dispatched",
+                        "Dispatched call to $currentTarget after ${countdownDurationSeconds}s countdown completed.",
+                        EventOutcome.DISPATCHED
+                    )
+                }
             }
         }.start()
     }
@@ -91,17 +153,24 @@ class SosController(
     }
 
     fun executeCall(number: String) {
+        if (isSimulationMode) {
+            speakCallback("Simulation mode: Call to $number simulated successfully.")
+            return
+        }
+
         val hasCallPermission = ContextCompat.checkSelfPermission(
             context,
             Manifest.permission.CALL_PHONE
         ) == PackageManager.PERMISSION_GRANTED
 
+        val cleanNumber = number.replace(" ", "").replace("-", "")
+
         val intent = if (hasCallPermission) {
-            Intent(Intent.ACTION_CALL, Uri.parse("tel:$number")).apply {
+            Intent(Intent.ACTION_CALL, Uri.parse("tel:$cleanNumber")).apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
         } else {
-            Intent(Intent.ACTION_DIAL, Uri.parse("tel:$number")).apply {
+            Intent(Intent.ACTION_DIAL, Uri.parse("tel:$cleanNumber")).apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
         }
@@ -109,7 +178,7 @@ class SosController(
         try {
             context.startActivity(intent)
         } catch (e: Exception) {
-            // Sequential fallback: try next contact if primary fails
+            // If primary action fails (e.g. SecurityException or dialer issue), try fallback
             trySequentialFallback()
         }
     }

@@ -25,6 +25,10 @@
     <color name="emerald_safe">#10B981</color>
     <color name="emerald_tint">#064E3B</color>
 
+    <!-- Amber Warning & Notice -->
+    <color name="amber_warning">#F59E0B</color>
+    <color name="amber_tint">#78350F</color>
+
     <!-- Neutral Typography & Accents -->
     <color name="text_title">#FFFFFF</color>
     <color name="text_body">#E2E8F0</color>

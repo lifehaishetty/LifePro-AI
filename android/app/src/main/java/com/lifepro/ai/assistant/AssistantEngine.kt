@@ -57,6 +57,12 @@ class AssistantEngine(
 
     private val VERCEL_URL = "https://life-pro-ai.vercel.app/api/chat"
     private var pendingContext: String? = null // For follow-up questions
+    private var pendingContextTimestamp: Long = 0L
+    private val CONTEXT_TIMEOUT_MS = 30000L // 30 seconds
+
+    companion object {
+        const val SAFETY_DISCLAIMER = "LifePro-AI is an assistive safety companion and does not replace professional medical diagnosis, emergency 112 services, or personal care."
+    }
 
     /**
      * Main intent handling function.
@@ -69,9 +75,15 @@ class AssistantEngine(
 
         listener.onStateChanged(AssistantState.PROCESSING)
         val lower = clean.lowercase()
+        val now = System.currentTimeMillis()
+
+        // Expire stale context if > 30 seconds
+        if (pendingContext != null && (now - pendingContextTimestamp > CONTEXT_TIMEOUT_MS)) {
+            pendingContext = null
+        }
 
         // 1. CANCELLATION
-        if (lower.contains("cancel") || lower.contains("false alarm") || lower.contains("stop")) {
+        if (lower.contains("cancel") || lower.contains("false alarm") || lower.contains("stop") || lower.contains("i am fine") || lower.contains("i am ok")) {
             pendingContext = null
             deliverResponse(AssistantResponse(
                 replyText = "Emergency cancelled. You are completely safe.",
@@ -80,12 +92,12 @@ class AssistantEngine(
             return
         }
 
-        // 2. CONTEXTUAL FOLLOW-UP RESPONSE
+        // 2. CONTEXTUAL FOLLOW-UP RESPONSE (e.g. after fall inquiry)
         if (pendingContext == "FALL_DETECTED") {
             pendingContext = null
-            if (lower.contains("yes") || lower.contains("help") || lower.contains("call") || lower.contains("hurt")) {
+            if (lower.contains("yes") || lower.contains("help") || lower.contains("call") || lower.contains("hurt") || lower.contains("can't get up")) {
                 deliverResponse(AssistantResponse(
-                    replyText = "Emergency confirmed. Initiating 10-second countdown for 112 dispatch now.",
+                    replyText = "Emergency confirmed. Initiating countdown for emergency helpline dispatch now.",
                     actionType = ActionType.SOS,
                     target = "112",
                     isEmergency = true
@@ -101,8 +113,9 @@ class AssistantEngine(
         }
 
         // 3. FALL / INJURY REPORT (Ask clarifying safety question per specs)
-        if (lower.contains("fell down") || lower.contains("i fell") || lower.contains("i slipped") || lower.contains("hurt")) {
+        if (lower.contains("fell down") || lower.contains("i fell") || lower.contains("i slipped") || lower.contains("i have fallen") || lower.contains("i collapsed")) {
             pendingContext = "FALL_DETECTED"
+            pendingContextTimestamp = now
             deliverResponse(AssistantResponse(
                 replyText = "I heard you fell. Are you hurt? Do you need me to alert your guardian or call 112?",
                 actionType = ActionType.NONE
@@ -110,10 +123,41 @@ class AssistantEngine(
             return
         }
 
-        // 4. INSTANT EMERGENCY SHOUTS
-        if (lower.contains("help") || lower.contains("ambulance") || lower.contains("save me") || lower.contains("danger") || lower.contains("police")) {
+        // 4. CASUAL VS ACUTE EMERGENCY DISTINCTION
+        // If user says "help me find my glasses" or "help with my phone", it is NOT acute life-or-death distress.
+        val isCasualHelp = lower.contains("help me find") ||
+                lower.contains("help with") ||
+                lower.contains("help me with") ||
+                lower.contains("help to") ||
+                lower.contains("can you help") ||
+                lower.contains("help me read")
+
+        if (isCasualHelp) {
             deliverResponse(AssistantResponse(
-                replyText = "Emergency distress detected! Starting 10-second countdown for Indian 112 SOS.",
+                replyText = "I'm here to assist you. If you are experiencing a medical emergency, say 'Emergency' or shout 'Help' to trigger 112 SOS.",
+                actionType = ActionType.NONE
+            ))
+            return
+        }
+
+        // ACUTE DISTRESS SHOUTS
+        val isAcuteDistress = lower == "help" ||
+                lower.contains("help!") ||
+                lower.contains("help me!") ||
+                lower.contains("save me") ||
+                lower.contains("ambulance") ||
+                lower.contains("emergency") ||
+                lower.contains("can't breathe") ||
+                lower.contains("cannot breathe") ||
+                lower.contains("heart attack") ||
+                lower.contains("chest pain") ||
+                lower.contains("bleeding heavily") ||
+                lower.contains("danger") ||
+                lower.contains("police")
+
+        if (isAcuteDistress) {
+            deliverResponse(AssistantResponse(
+                replyText = "Emergency distress detected! Starting countdown for emergency SOS dispatch.",
                 actionType = ActionType.SOS,
                 target = "112",
                 isEmergency = true

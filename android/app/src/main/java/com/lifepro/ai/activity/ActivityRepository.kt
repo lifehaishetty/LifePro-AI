@@ -24,7 +24,9 @@ enum class EventOutcome {
     CANCELLED,
     FAILED,
     ACTIVE,
-    PENDING
+    PENDING,
+    DISPATCHED,
+    SIMULATION
 }
 
 data class SafetyEvent(

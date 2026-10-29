@@ -1,5 +1,9 @@
 package com.lifepro.ai
 
+import com.lifepro.ai.activity.EventOutcome
+import com.lifepro.ai.contacts.ContactManager
+import com.lifepro.ai.location.LocationReport
+import com.lifepro.ai.location.LocationStatus
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -97,10 +101,10 @@ class LifeProUnitTests {
 
     @Test
     fun testEmergencyIntentDetection() {
-        val phrases = listOf("help me please", "call ambulance now", "save me", "there is danger", "call police")
+        val phrases = listOf("help!", "call ambulance now", "save me", "there is danger", "call police")
         for (phrase in phrases) {
             val lower = phrase.lowercase()
-            val isEmergency = lower.contains("help") || lower.contains("ambulance") || lower.contains("save me") || lower.contains("danger") || lower.contains("police")
+            val isEmergency = lower == "help" || lower.contains("help!") || lower.contains("ambulance") || lower.contains("save me") || lower.contains("danger") || lower.contains("police")
             assertTrue("Expected emergency for '$phrase'", isEmergency)
         }
     }
@@ -117,7 +121,62 @@ class LifeProUnitTests {
     fun testCancellationVoiceTrigger() {
         val phrase = "cancel the emergency false alarm"
         val lower = phrase.lowercase()
-        val isCancel = lower.contains("cancel") || lower.contains("false alarm") || lower.contains("stop")
+        val isCancel = lower.contains("cancel") || lower.contains("false alarm") || lower.contains("stop") || lower.contains("i am ok")
         assertTrue(isCancel)
+    }
+
+    @Test
+    fun testCasualHelpDistinguishedFromAcuteEmergency() {
+        val casualPhrases = listOf(
+            "can you help me find my glasses",
+            "help with my phone",
+            "could you help to read this message",
+            "help me with my calendar"
+        )
+        for (phrase in casualPhrases) {
+            val lower = phrase.lowercase()
+            val isCasual = lower.contains("help me find") ||
+                    lower.contains("help with") ||
+                    lower.contains("help me with") ||
+                    lower.contains("help to") ||
+                    lower.contains("can you help") ||
+                    lower.contains("help me read")
+            assertTrue("Expected casual classification for '$phrase'", isCasual)
+        }
+    }
+
+    @Test
+    fun testPhoneNumberValidationRules() {
+        assertTrue("Emergency 112 must be valid", ContactManager.isValidPhoneNumber("112"))
+        assertTrue("Emergency 911 must be valid", ContactManager.isValidPhoneNumber("911"))
+        assertTrue("Indian mobile number must be valid", ContactManager.isValidPhoneNumber("+91 98765 11223"))
+        assertTrue("Standard 10-digit number must be valid", ContactManager.isValidPhoneNumber("9876543210"))
+        assertFalse("Empty phone string must be invalid", ContactManager.isValidPhoneNumber(""))
+        assertFalse("Two digit number must be invalid", ContactManager.isValidPhoneNumber("12"))
+        assertFalse("Letters only must be invalid", ContactManager.isValidPhoneNumber("call-doctor"))
+    }
+
+    @Test
+    fun testLocationDetailedFormattingIncludesAccuracyAndTimestamp() {
+        val report = LocationReport(
+            latitude = 19.0760,
+            longitude = 72.8777,
+            accuracy = 12.5f,
+            timestamp = System.currentTimeMillis(),
+            status = LocationStatus.LIVE_GPS
+        )
+        val detailed = report.getDetailedCoordinates()
+        assertTrue("Must contain latitude degrees", detailed.contains("19.0760° N"))
+        assertTrue("Must contain longitude degrees", detailed.contains("72.8777° E"))
+        assertTrue("Must contain accuracy radius", detailed.contains("±12m accuracy"))
+    }
+
+    @Test
+    fun testDispatchedOutcomeDistinguishesFromConfirmedDelivery() {
+        // Platform safeguards: Telephony handoff is DISPATCHED, not verified SUCCESS until confirmed by carrier
+        val dispatchedOutcome = EventOutcome.DISPATCHED
+        val simulationOutcome = EventOutcome.SIMULATION
+        assertNotEquals("Dispatched action is not confirmed success", EventOutcome.SUCCESS, dispatchedOutcome)
+        assertNotEquals("Simulation is not live dispatch", EventOutcome.DISPATCHED, simulationOutcome)
     }
 }

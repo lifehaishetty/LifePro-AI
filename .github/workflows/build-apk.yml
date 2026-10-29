@@ -32,8 +32,12 @@ jobs:
           sed -i 's/\r$//' android/gradlew || true
           chmod +x android/gradlew || true
 
+      - name: Run Unit Tests with Gradle
+        working-directory: android
+        run: |
+          bash ./gradlew testDebugUnitTest --stacktrace
+
       - name: Build Debug APK with Gradle
-        continue-on-error: true
         working-directory: android
         run: |
           bash ./gradlew assembleDebug --stacktrace
@@ -52,6 +56,8 @@ jobs:
             cp public/LifePro-AI.apk release-output/LifePro-AI.apk
           fi
           ls -la release-output/
+          echo "SHA256 CHECKSUM:"
+          sha256sum release-output/LifePro-AI.apk | tee release-output/checksum.txt
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
@@ -63,9 +69,10 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          CHECKSUM=$(cat release-output/checksum.txt | awk '{print $1}')
           gh release delete v1.0.0 --yes || true
           git tag -d v1.0.0 2>/dev/null || true
           git push origin :refs/tags/v1.0.0 2>/dev/null || true
           gh release create v1.0.0 release-output/LifePro-AI.apk \
             --title "Life Pro.AI v1.0.0 - Mobile Android App" \
-            --notes "Official Life Pro.AI Android Application APK. Direct download for Android devices."
+            --notes "Official Life Pro.AI Android Application APK. Direct download for Android devices. Verified SHA256: ${CHECKSUM}"

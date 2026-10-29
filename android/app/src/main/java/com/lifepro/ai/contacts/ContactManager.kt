@@ -29,6 +29,15 @@ class ContactManager private constructor(context: Context) {
                 instance ?: ContactManager(context.applicationContext).also { instance = it }
             }
         }
+
+        /**
+         * Validates that a phone number contains a reasonable digit count (3 to 15 digits)
+         * to support both short emergency codes (e.g., 112, 911) and full international numbers.
+         */
+        fun isValidPhoneNumber(phoneNumber: String): Boolean {
+            val digits = phoneNumber.filter { it.isDigit() }
+            return digits.length in 3..15
+        }
     }
 
     init {
@@ -99,9 +108,16 @@ class ContactManager private constructor(context: Context) {
         prefs.edit().putString("contacts_json_array", array.toString()).apply()
     }
 
-    fun addContact(contact: SafetyContact) {
+    /**
+     * Adds a contact after validating that the phone number is valid and the name is non-empty.
+     */
+    fun addContact(contact: SafetyContact): Boolean {
+        if (!isValidPhoneNumber(contact.phoneNumber) || contact.name.trim().isEmpty()) {
+            return false
+        }
         contactsList.add(contact)
         saveContacts()
+        return true
     }
 
     fun removeContact(id: String) {
@@ -114,6 +130,7 @@ class ContactManager private constructor(context: Context) {
      * "Call my daughter" -> matches relationship "daughter"
      * "Call Dr. Mehta" -> matches name "Dr. Mehta"
      * "Call Rahul" -> matches name "Rahul"
+     * "Call my favorite" -> returns highest priority favorite contact
      */
     fun resolveContactFromSpeech(spokenPhrase: String): SafetyContact? {
         val clean = spokenPhrase.lowercase().replace("call", "").replace("my", "").replace("please", "").trim()
@@ -131,9 +148,9 @@ class ContactManager private constructor(context: Context) {
         }
         if (byName != null) return byName
 
-        // 3. Keyword "favorite"
+        // 3. "Favorite" keyword
         if (clean.contains("favorite") || clean.contains("favourite")) {
-            return getFavoriteContacts().firstOrNull()
+            return getFavoriteContacts().firstOrNull() ?: contactsList.firstOrNull()
         }
 
         return null

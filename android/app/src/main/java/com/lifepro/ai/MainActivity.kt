@@ -4,8 +4,11 @@ import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.PowerManager
+import android.provider.Settings
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
@@ -125,6 +128,16 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private lateinit var tvAccountName: TextView
     private lateinit var tvAccountRole: TextView
     private lateinit var btnLogout: MaterialButton
+
+    // Settings Safety & Battery Controls
+    private lateinit var switchSimulationMode: androidx.appcompat.widget.SwitchCompat
+    private lateinit var tvCountdownDurationLabel: TextView
+    private lateinit var btnDuration10s: MaterialButton
+    private lateinit var btnDuration15s: MaterialButton
+    private lateinit var btnDuration20s: MaterialButton
+    private lateinit var btnDuration30s: MaterialButton
+    private lateinit var tvBatteryStatus: TextView
+    private lateinit var btnBatteryOptimization: MaterialButton
 
     // Speech & Audio Components
     private var speechRecognizer: SpeechRecognizer? = null
@@ -303,6 +316,15 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         tvAccountRole = findViewById(R.id.tvAccountRole)
         btnLogout = findViewById(R.id.btnLogout)
 
+        switchSimulationMode = findViewById(R.id.switchSimulationMode)
+        tvCountdownDurationLabel = findViewById(R.id.tvCountdownDurationLabel)
+        btnDuration10s = findViewById(R.id.btnDuration10s)
+        btnDuration15s = findViewById(R.id.btnDuration15s)
+        btnDuration20s = findViewById(R.id.btnDuration20s)
+        btnDuration30s = findViewById(R.id.btnDuration30s)
+        tvBatteryStatus = findViewById(R.id.tvBatteryStatus)
+        btnBatteryOptimization = findViewById(R.id.btnBatteryOptimization)
+
         // Setup role badge in header
         val isUser = authManager.isUserRole()
         tvModeSubtitle.text = if (isUser) "User Mode • Voice Active" else "Guardian Mode • Active Monitoring"
@@ -341,6 +363,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                 R.id.nav_settings -> {
                     tabViewSettings.visibility = View.VISIBLE
                     checkAndReportPermissions()
+                    updateBatteryOptimizationDisplay()
                     true
                 }
                 else -> false
@@ -353,7 +376,11 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             sosController.start10SecondSos("112", object : SosCallback {
                 override fun onCountdownTick(secondsRemaining: Long, target: String) {
                     runOnUiThread {
-                        tvCountdown.text = "Calling 112 SOS in ${secondsRemaining}s..."
+                        tvCountdown.text = if (sosController.isSimulationMode) {
+                            "SIMULATION SOS in ${secondsRemaining}s..."
+                        } else {
+                            "Calling $target in ${secondsRemaining}s..."
+                        }
                     }
                 }
                 override fun onCountdownFinished(target: String) {
@@ -408,7 +435,11 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
     private fun showSosCountdownView() {
         layoutSosCountdown.visibility = View.VISIBLE
-        tvCountdown.text = "Calling 112 SOS in 10s..."
+        tvCountdown.text = if (sosController.isSimulationMode) {
+            "SIMULATION SOS in ${sosController.countdownDurationSeconds}s..."
+        } else {
+            "Calling ${sosController.currentTarget} in ${sosController.countdownDurationSeconds}s..."
+        }
     }
 
     private fun hideSosCountdownView() {
@@ -560,7 +591,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             val rel = etRel.text.toString().trim()
             val phone = etPhone.text.toString().trim()
             if (name.isNotEmpty() && phone.isNotEmpty()) {
-                contactManager.addContact(
+                val added = contactManager.addContact(
                     SafetyContact(
                         name = name,
                         relationship = if (rel.isNotEmpty()) rel else "Contact",
@@ -568,8 +599,14 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                         isFavorite = true
                     )
                 )
-                renderContactsList()
-                Toast.makeText(this, "Contact added", Toast.LENGTH_SHORT).show()
+                if (added) {
+                    renderContactsList()
+                    Toast.makeText(this, "Safety contact added successfully", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(this, "Invalid phone number (must be 3 to 15 digits)", Toast.LENGTH_LONG).show()
+                }
+            } else {
+                Toast.makeText(this, "Please enter both name and phone number", Toast.LENGTH_SHORT).show()
             }
         }
         builder.setNegativeButton("Cancel", null)
@@ -608,6 +645,8 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
             when (e.outcome) {
                 EventOutcome.SUCCESS -> tvOutcome.setTextColor(getColor(R.color.emerald_safe))
+                EventOutcome.DISPATCHED -> tvOutcome.setTextColor(getColor(R.color.violet_light))
+                EventOutcome.SIMULATION -> tvOutcome.setTextColor(getColor(R.color.violet_light))
                 EventOutcome.ACTIVE -> tvOutcome.setTextColor(getColor(R.color.red_light))
                 EventOutcome.CANCELLED -> tvOutcome.setTextColor(getColor(R.color.violet_light))
                 EventOutcome.FAILED -> tvOutcome.setTextColor(getColor(R.color.text_dim))
@@ -625,6 +664,47 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         tvAccountName.text = "Account: ${authManager.currentUser?.name ?: "User"}"
         tvAccountRole.text = "Role: ${if (authManager.isUserRole()) "User (Assistance Receiver)" else "Guardian (Caregiver)"}"
 
+        // Safe Simulation Mode Toggle
+        switchSimulationMode.isChecked = sosController.isSimulationMode
+        switchSimulationMode.setOnCheckedChangeListener { _, isChecked ->
+            sosController.isSimulationMode = isChecked
+            val notice = if (isChecked) "Simulation Mode Active: SOS will test fully without dialing 112." else "Live Mode Active: Emergency calls to 112 are live."
+            Toast.makeText(this, notice, Toast.LENGTH_SHORT).show()
+        }
+
+        // Adjustable Countdown Duration Buffer
+        fun updateDurationLabel() {
+            tvCountdownDurationLabel.text = "SOS Countdown Buffer: ${sosController.countdownDurationSeconds} seconds"
+        }
+        updateDurationLabel()
+
+        btnDuration10s.setOnClickListener { sosController.countdownDurationSeconds = 10; updateDurationLabel() }
+        btnDuration15s.setOnClickListener { sosController.countdownDurationSeconds = 15; updateDurationLabel() }
+        btnDuration20s.setOnClickListener { sosController.countdownDurationSeconds = 20; updateDurationLabel() }
+        btnDuration30s.setOnClickListener { sosController.countdownDurationSeconds = 30; updateDurationLabel() }
+
+        // Background Battery Reliability
+        updateBatteryOptimizationDisplay()
+        btnBatteryOptimization.setOnClickListener {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                try {
+                    val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                        data = Uri.parse("package:$packageName")
+                    }
+                    startActivity(intent)
+                } catch (e: Exception) {
+                    try {
+                        val generalIntent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+                        startActivity(generalIntent)
+                    } catch (e2: Exception) {
+                        Toast.makeText(this, "Open Device Settings > Battery to exclude LifePro", Toast.LENGTH_LONG).show()
+                    }
+                }
+            } else {
+                Toast.makeText(this, "Battery optimization not restricted on this Android version.", Toast.LENGTH_SHORT).show()
+            }
+        }
+
         btnGrantPermissions.setOnClickListener {
             requestPermissionsExplicitly()
         }
@@ -633,6 +713,18 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             authManager.logout()
             startActivity(Intent(this, AuthActivity::class.java))
             finish()
+        }
+    }
+
+    private fun updateBatteryOptimizationDisplay() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            val pm = getSystemService(Context.POWER_SERVICE) as? PowerManager
+            val isExempted = pm?.isIgnoringBatteryOptimizations(packageName) == true
+            tvBatteryStatus.text = "🔋 Background Protection: " + if (isExempted) "Exempted (Screen-off Active)" else "Restricted (Tap to Exclude)"
+            tvBatteryStatus.setTextColor(if (isExempted) getColor(R.color.emerald_safe) else getColor(R.color.amber_warning))
+        } else {
+            tvBatteryStatus.text = "🔋 Background Protection: Supported"
+            tvBatteryStatus.setTextColor(getColor(R.color.emerald_safe))
         }
     }
 

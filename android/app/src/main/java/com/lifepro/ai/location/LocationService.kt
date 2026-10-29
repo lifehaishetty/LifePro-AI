@@ -39,9 +39,9 @@ data class LocationReport(
 
     fun getDetailedCoordinates(): String {
         return if (status == LocationStatus.LIVE_GPS || status == LocationStatus.STALE_CACHED) {
-            val timeStr = java.text.SimpleDateFormat("h:mm:ss a", java.util.Locale.getDefault()).format(java.util.Date(timestamp))
+            val timeStr = java.text.SimpleDateFormat("h:mm:ss a", java.util.Locale.US).format(java.util.Date(timestamp))
             val accStr = if (accuracy > 0) " (±${accuracy.toInt()}m accuracy)" else ""
-            "${"%.4f".format(latitude)}° N, ${"%.4f".format(longitude)}° E$accStr at $timeStr"
+            "${String.format(java.util.Locale.US, "%.4f", latitude)}° N, ${String.format(java.util.Locale.US, "%.4f", longitude)}° E$accStr at $timeStr"
         } else {
             "Location unavailable (Status: ${status.name})"
         }

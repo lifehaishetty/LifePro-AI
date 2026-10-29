@@ -1,13 +1,45 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="primary">#2563EB</color>
-    <color name="primary_dark">#1D4ED8</color>
-    <color name="accent">#10B981</color>
+    <!-- Dark Luxury Obsidian Backgrounds -->
+    <color name="bg_dark">#0A0A0E</color>
+    <color name="bg_card">#13141E</color>
+    <color name="bg_elevated">#1C1E2D</color>
+    <color name="border_subtle">#292B3E</color>
+    <color name="border_active">#4F46E5</color>
+
+    <!-- Electric & Royal Violet (Brand, Assistant, Highlights) -->
+    <color name="violet_primary">#7C3AED</color>
+    <color name="violet_light">#8B5CF6</color>
+    <color name="violet_dark">#6D28D9</color>
+    <color name="violet_tint">#2E1065</color>
+    <color name="violet_glow">#4C1D95</color>
+
+    <!-- Emergency Crimson Red (SOS, Alerts, Critical Actions) -->
+    <color name="red_emergency">#DC2626</color>
+    <color name="red_light">#EF4444</color>
+    <color name="red_dark">#991B1B</color>
+    <color name="red_tint">#450A0A</color>
+    <color name="red_pulse">#B91C1C</color>
+
+    <!-- Safe / Success Emerald -->
+    <color name="emerald_safe">#10B981</color>
+    <color name="emerald_tint">#064E3B</color>
+
+    <!-- Neutral Typography & Accents -->
+    <color name="text_title">#FFFFFF</color>
+    <color name="text_body">#E2E8F0</color>
+    <color name="text_muted">#94A3B8</color>
+    <color name="text_dim">#64748B</color>
+
+    <!-- Backward-compatible aliases -->
+    <color name="primary">#7C3AED</color>
+    <color name="primary_dark">#6D28D9</color>
+    <color name="accent">#8B5CF6</color>
     <color name="sos_red">#DC2626</color>
     <color name="sos_red_dark">#991B1B</color>
-    <color name="guardian_purple">#7C3AED</color>
-    <color name="background">#F8FAFC</color>
-    <color name="card_bg">#FFFFFF</color>
-    <color name="text_primary">#0F172A</color>
-    <color name="text_secondary">#64748B</color>
+    <color name="guardian_purple">#8B5CF6</color>
+    <color name="background">#0A0A0E</color>
+    <color name="card_bg">#13141E</color>
+    <color name="text_primary">#FFFFFF</color>
+    <color name="text_secondary">#94A3B8</color>
 </resources>

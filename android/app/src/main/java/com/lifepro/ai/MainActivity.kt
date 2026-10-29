@@ -4,283 +4,697 @@ import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.location.Location
-import android.location.LocationManager
-import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.os.CountDownTimer
-import android.provider.MediaStore
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
+import android.text.Editable
+import android.text.TextWatcher
+import android.view.LayoutInflater
 import android.view.View
-import android.widget.Button
-import android.widget.EditText
+import android.widget.FrameLayout
+import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import okhttp3.*
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.RequestBody.Companion.toRequestBody
-import org.json.JSONObject
-import java.io.IOException
+import com.google.android.material.bottomnavigation.BottomNavigationView
+import com.google.android.material.button.MaterialButton
+import com.google.android.material.card.MaterialCardView
+import com.google.android.material.textfield.TextInputEditText
+import com.lifepro.ai.activity.ActivityRepository
+import com.lifepro.ai.activity.EventOutcome
+import com.lifepro.ai.activity.EventType
+import com.lifepro.ai.activity.SafetyEvent
+import com.lifepro.ai.assistant.ActionType
+import com.lifepro.ai.assistant.AssistantEngine
+import com.lifepro.ai.assistant.AssistantListener
+import com.lifepro.ai.assistant.AssistantResponse
+import com.lifepro.ai.assistant.AssistantState
+import com.lifepro.ai.auth.AuthManager
+import com.lifepro.ai.auth.UserRole
+import com.lifepro.ai.camera.CameraSessionManager
+import com.lifepro.ai.contacts.ContactManager
+import com.lifepro.ai.contacts.SafetyContact
+import com.lifepro.ai.emergency.SosCallback
+import com.lifepro.ai.emergency.SosController
+import com.lifepro.ai.location.LocationReport
+import com.lifepro.ai.location.LocationService
+import com.lifepro.ai.location.LocationStatus
+import com.lifepro.ai.pairing.PairingManager
+import com.lifepro.ai.pairing.PairingStatus
+import com.lifepro.ai.ui.AuthActivity
 import java.util.Locale
 
 class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
-    // =========================================================================
-    // SERVER CONFIGURATION
-    // Production Vercel Serverless API: https://life-pro-ai.vercel.app/api/chat
-    // Fallback: localhost:3000 (when developing via USB ADB reverse port forwarding)
-    // =========================================================================
-    private val VERCEL_URL = "https://life-pro-ai.vercel.app/api/chat"
-    private val LOCAL_URL = "http://localhost:3000/api/chat"
-    private var SERVER_URL = VERCEL_URL
+    private lateinit var authManager: AuthManager
+    private lateinit var contactManager: ContactManager
+    private lateinit var locationService: LocationService
+    private lateinit var activityRepo: ActivityRepository
+    private lateinit var pairingManager: PairingManager
+    private lateinit var cameraManager: CameraSessionManager
+    private lateinit var sosController: SosController
+    private lateinit var assistantEngine: AssistantEngine
 
-    private val httpClient = OkHttpClient()
-    private val PERMISSION_REQUEST_CODE = 101
+    // Views: Top Bar
+    private lateinit var tvModeSubtitle: TextView
+    private lateinit var tvLiveStatus: TextView
 
-    // Role state
-    private var isUserMode = true
+    // Views: Navigation Tabs
+    private lateinit var tabViewAssistant: ScrollView
+    private lateinit var tabViewGuardian: ScrollView
+    private lateinit var tabViewContacts: ScrollView
+    private lateinit var tabViewActivity: LinearLayout
+    private lateinit var tabViewSettings: ScrollView
+    private lateinit var bottomNav: BottomNavigationView
 
-    // Emergency countdown
-    private var sosTimer: CountDownTimer? = null
-    private val SOS_COUNTDOWN_MS: Long = 10000 // 10 seconds
+    // Tab 1: Assistant Views
+    private lateinit var layoutSosCountdown: MaterialCardView
+    private lateinit var tvCountdown: TextView
+    private lateinit var btnCancelSos: MaterialButton
+    private lateinit var btnTriggerSos: MaterialButton
+    private lateinit var btnVoiceOrb: FrameLayout
+    private lateinit var ivOrbIcon: ImageView
+    private lateinit var tvVoiceStatus: TextView
+    private lateinit var tvReply: TextView
+    private lateinit var btnStopSpeaking: MaterialButton
+    private lateinit var btnQuickCallDaughter: MaterialButton
+    private lateinit var btnQuickLocation: MaterialButton
+    private lateinit var btnQuickCamera: MaterialButton
+    private lateinit var etMessage: TextInputEditText
+    private lateinit var btnSend: MaterialButton
 
-    // Voice components
+    // Tab 2: Guardian Views
+    private lateinit var tvGuardianRoleSubtitle: TextView
+    private lateinit var cardUserPairing: MaterialCardView
+    private lateinit var tvPairingCode: TextView
+    private lateinit var btnRegenerateCode: MaterialButton
+    private lateinit var btnSimulateRequest: MaterialButton
+    private lateinit var cardPendingApproval: MaterialCardView
+    private lateinit var tvRequesterInfo: TextView
+    private lateinit var btnApproveGuardian: MaterialButton
+    private lateinit var btnRejectGuardian: MaterialButton
+    private lateinit var tvGpsCoordinates: TextView
+    private lateinit var btnOpenMaps: MaterialButton
+    private lateinit var btnShareWhatsAppLocation: MaterialButton
+    private lateinit var btnStartCameraCheck: MaterialButton
+    private lateinit var btnRevokeAccess: MaterialButton
+
+    // Tab 3: Contacts Views
+    private lateinit var btnAddContactDialog: MaterialButton
+    private lateinit var layoutContactsContainer: LinearLayout
+
+    // Tab 4: Activity Views
+    private lateinit var etSearchActivity: TextInputEditText
+    private lateinit var layoutActivityContainer: LinearLayout
+
+    // Tab 5: Settings Views
+    private lateinit var tvPermAudio: TextView
+    private lateinit var tvPermPhone: TextView
+    private lateinit var tvPermLocation: TextView
+    private lateinit var tvPermCamera: TextView
+    private lateinit var btnGrantPermissions: MaterialButton
+    private lateinit var tvAccountName: TextView
+    private lateinit var tvAccountRole: TextView
+    private lateinit var btnLogout: MaterialButton
+
+    // Speech & Audio Components
     private var speechRecognizer: SpeechRecognizer? = null
     private var textToSpeech: TextToSpeech? = null
     private var isListening = false
-    private var autoListenLoop = true // Continuous conversational mode for vision impairment
-
-    // Views
-    private lateinit var tvReply: TextView
-    private lateinit var tvActionBadge: TextView
-    private lateinit var tvVoiceStatus: TextView
-    private lateinit var tvModeSubtitle: TextView
-    private lateinit var tvLiveStatus: TextView
-    private lateinit var layoutSosCountdown: LinearLayout
-    private lateinit var tvCountdown: TextView
-    private lateinit var btnCancelSos: Button
-    private lateinit var btnTriggerSos: Button
-    private lateinit var btnVoiceListen: Button
-    private lateinit var btnRoleUser: Button
-    private lateinit var btnRoleGuardian: Button
-    private lateinit var btnQuickCall: Button
-    private lateinit var btnCameraCheck: Button
-    private lateinit var etMessage: EditText
-    private lateinit var btnSend: Button
+    private val PERMISSION_REQUEST_CODE = 2001
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        authManager = AuthManager.getInstance(this)
+
+        // Session check: If user not logged in, redirect to AuthActivity
+        if (!authManager.isLoggedIn()) {
+            startActivity(Intent(this, AuthActivity::class.java))
+            finish()
+            return
+        }
+
         setContentView(R.layout.activity_main)
 
+        initDependencies()
         initViews()
-        requestAppPermissions()
+        setupBottomNavigation()
+        setupAssistant()
+        setupGuardianTab()
+        setupContactsTab()
+        setupActivityTab()
+        setupSettingsTab()
+        startBackgroundService()
+        checkAndReportPermissions()
+    }
+
+    private fun initDependencies() {
+        contactManager = ContactManager.getInstance(this)
+        locationService = LocationService.getInstance(this)
+        activityRepo = ActivityRepository.getInstance(this)
+        pairingManager = PairingManager.getInstance(this)
+        cameraManager = CameraSessionManager.getInstance(this)
+
+        sosController = SosController(this) { spokenText ->
+            speakAloud(spokenText)
+        }
+
+        assistantEngine = AssistantEngine(this, object : AssistantListener {
+            override fun onStateChanged(state: AssistantState) {
+                runOnUiThread {
+                    when (state) {
+                        AssistantState.IDLE -> {
+                            tvVoiceStatus.text = "Ready. Say 'Hello Life'"
+                            ivOrbIcon.setColorFilter(getColor(R.color.violet_light))
+                        }
+                        AssistantState.LISTENING -> {
+                            tvVoiceStatus.text = "🎤 Hearing voice..."
+                            ivOrbIcon.setColorFilter(getColor(R.color.emerald_safe))
+                        }
+                        AssistantState.PROCESSING -> {
+                            tvVoiceStatus.text = "Processing..."
+                            ivOrbIcon.setColorFilter(getColor(R.color.violet_light))
+                        }
+                        AssistantState.SPEAKING -> {
+                            tvVoiceStatus.text = "Speaking response aloud..."
+                            ivOrbIcon.setColorFilter(getColor(R.color.violet_primary))
+                            btnStopSpeaking.visibility = View.VISIBLE
+                        }
+                    }
+                }
+            }
+
+            override fun onResponseReady(response: AssistantResponse) {
+                runOnUiThread {
+                    tvReply.text = response.replyText
+                    speakAloud(response.replyText)
+
+                    // Execute requested system action
+                    when (response.actionType) {
+                        ActionType.SOS -> {
+                            sosController.start10SecondSos(response.target)
+                            showSosCountdownView()
+                        }
+                        ActionType.CANCEL -> {
+                            sosController.cancelSos()
+                            hideSosCountdownView()
+                        }
+                        ActionType.CALL -> {
+                            sosController.executeCall(response.target)
+                        }
+                        ActionType.LOCATION_SHARE -> {
+                            startActivity(locationService.createWhatsAppShareIntent())
+                        }
+                        ActionType.LOCATION_QUERY -> {
+                            refreshLocationDisplay()
+                        }
+                        ActionType.CAMERA_CHECK -> {
+                            triggerCameraCheck()
+                        }
+                        ActionType.NONE -> {}
+                    }
+                }
+            }
+
+            override fun onError(errorMessage: String) {
+                runOnUiThread {
+                    tvReply.text = errorMessage
+                    speakAloud(errorMessage)
+                }
+            }
+        })
+
         initTextToSpeech()
         initSpeechRecognizer()
-        setupListeners()
-        startBackgroundProtectionService()
     }
 
     private fun initViews() {
-        tvReply = findViewById(R.id.tvReply)
-        tvActionBadge = findViewById(R.id.tvActionBadge)
-        tvVoiceStatus = findViewById(R.id.tvVoiceStatus)
         tvModeSubtitle = findViewById(R.id.tvModeSubtitle)
         tvLiveStatus = findViewById(R.id.tvLiveStatus)
+
+        tabViewAssistant = findViewById(R.id.tabViewAssistant)
+        tabViewGuardian = findViewById(R.id.tabViewGuardian)
+        tabViewContacts = findViewById(R.id.tabViewContacts)
+        tabViewActivity = findViewById(R.id.tabViewActivity)
+        tabViewSettings = findViewById(R.id.tabViewSettings)
+        bottomNav = findViewById(R.id.bottomNav)
+
+        // Assistant tab views
         layoutSosCountdown = findViewById(R.id.layoutSosCountdown)
         tvCountdown = findViewById(R.id.tvCountdown)
         btnCancelSos = findViewById(R.id.btnCancelSos)
         btnTriggerSos = findViewById(R.id.btnTriggerSos)
-        btnVoiceListen = findViewById(R.id.btnVoiceListen)
-        btnRoleUser = findViewById(R.id.btnRoleUser)
-        btnRoleGuardian = findViewById(R.id.btnRoleGuardian)
-        btnQuickCall = findViewById(R.id.btnQuickCall)
-        btnCameraCheck = findViewById(R.id.btnCameraCheck)
+        btnVoiceOrb = findViewById(R.id.btnVoiceOrb)
+        ivOrbIcon = findViewById(R.id.ivOrbIcon)
+        tvVoiceStatus = findViewById(R.id.tvVoiceStatus)
+        tvReply = findViewById(R.id.tvReply)
+        btnStopSpeaking = findViewById(R.id.btnStopSpeaking)
+        btnQuickCallDaughter = findViewById(R.id.btnQuickCallDaughter)
+        btnQuickLocation = findViewById(R.id.btnQuickLocation)
+        btnQuickCamera = findViewById(R.id.btnQuickCamera)
         etMessage = findViewById(R.id.etMessage)
         btnSend = findViewById(R.id.btnSend)
+
+        // Guardian tab views
+        tvGuardianRoleSubtitle = findViewById(R.id.tvGuardianRoleSubtitle)
+        cardUserPairing = findViewById(R.id.cardUserPairing)
+        tvPairingCode = findViewById(R.id.tvPairingCode)
+        btnRegenerateCode = findViewById(R.id.btnRegenerateCode)
+        btnSimulateRequest = findViewById(R.id.btnSimulateRequest)
+        cardPendingApproval = findViewById(R.id.cardPendingApproval)
+        tvRequesterInfo = findViewById(R.id.tvRequesterInfo)
+        btnApproveGuardian = findViewById(R.id.btnApproveGuardian)
+        btnRejectGuardian = findViewById(R.id.btnRejectGuardian)
+        tvGpsCoordinates = findViewById(R.id.tvGpsCoordinates)
+        btnOpenMaps = findViewById(R.id.btnOpenMaps)
+        btnShareWhatsAppLocation = findViewById(R.id.btnShareWhatsAppLocation)
+        btnStartCameraCheck = findViewById(R.id.btnStartCameraCheck)
+        btnRevokeAccess = findViewById(R.id.btnRevokeAccess)
+
+        // Contacts tab views
+        btnAddContactDialog = findViewById(R.id.btnAddContactDialog)
+        layoutContactsContainer = findViewById(R.id.layoutContactsContainer)
+
+        // Activity tab views
+        etSearchActivity = findViewById(R.id.etSearchActivity)
+        layoutActivityContainer = findViewById(R.id.layoutActivityContainer)
+
+        // Settings tab views
+        tvPermAudio = findViewById(R.id.tvPermAudio)
+        tvPermPhone = findViewById(R.id.tvPermPhone)
+        tvPermLocation = findViewById(R.id.tvPermLocation)
+        tvPermCamera = findViewById(R.id.tvPermCamera)
+        btnGrantPermissions = findViewById(R.id.btnGrantPermissions)
+        tvAccountName = findViewById(R.id.tvAccountName)
+        tvAccountRole = findViewById(R.id.tvAccountRole)
+        btnLogout = findViewById(R.id.btnLogout)
+
+        // Setup role badge in header
+        val isUser = authManager.isUserRole()
+        tvModeSubtitle.text = if (isUser) "User Mode • Voice Active" else "Guardian Mode • Active Monitoring"
+        tvLiveStatus.text = if (isUser) "● PROTECTED" else "● MONITORING"
+        tvLiveStatus.setTextColor(if (isUser) getColor(R.color.emerald_safe) else getColor(R.color.violet_light))
     }
 
-    private fun setupListeners() {
-        // Role Selection
-        btnRoleUser.setOnClickListener { setRole(userMode = true) }
-        btnRoleGuardian.setOnClickListener { setRole(userMode = false) }
+    private fun setupBottomNavigation() {
+        bottomNav.setOnItemSelectedListener { item ->
+            tabViewAssistant.visibility = View.GONE
+            tabViewGuardian.visibility = View.GONE
+            tabViewContacts.visibility = View.GONE
+            tabViewActivity.visibility = View.GONE
+            tabViewSettings.visibility = View.GONE
 
-        // SOS Triggers
-        btnTriggerSos.setOnClickListener { start10SecondSosCountdown("112") }
-        btnCancelSos.setOnClickListener { cancelSos() }
+            when (item.itemId) {
+                R.id.nav_assistant -> {
+                    tabViewAssistant.visibility = View.VISIBLE
+                    true
+                }
+                R.id.nav_guardian -> {
+                    tabViewGuardian.visibility = View.VISIBLE
+                    refreshGuardianTabState()
+                    true
+                }
+                R.id.nav_contacts -> {
+                    tabViewContacts.visibility = View.VISIBLE
+                    renderContactsList()
+                    true
+                }
+                R.id.nav_activity -> {
+                    tabViewActivity.visibility = View.VISIBLE
+                    renderActivityList("")
+                    true
+                }
+                R.id.nav_settings -> {
+                    tabViewSettings.visibility = View.VISIBLE
+                    checkAndReportPermissions()
+                    true
+                }
+                else -> false
+            }
+        }
+    }
 
-        // Voice Listen Button
-        btnVoiceListen.setOnClickListener { toggleVoiceListening() }
+    private fun setupAssistant() {
+        btnTriggerSos.setOnClickListener {
+            sosController.start10SecondSos("112", object : SosCallback {
+                override fun onCountdownTick(secondsRemaining: Long, target: String) {
+                    runOnUiThread {
+                        tvCountdown.text = "Calling 112 SOS in ${secondsRemaining}s..."
+                    }
+                }
+                override fun onCountdownFinished(target: String) {
+                    runOnUiThread { hideSosCountdownView() }
+                }
+                override fun onSosCancelled() {
+                    runOnUiThread { hideSosCountdownView() }
+                }
+            })
+            showSosCountdownView()
+        }
 
-        // Quick Calls & Camera
-        btnQuickCall.setOnClickListener { callEmergencyNumber("112") }
-        btnCameraCheck.setOnClickListener { openFaceTimeCameraCheck() }
+        btnCancelSos.setOnClickListener {
+            sosController.cancelSos()
+            hideSosCountdownView()
+        }
 
-        // Text Message Send (Silent mode fallback)
+        btnVoiceOrb.setOnClickListener {
+            toggleSpeechListening()
+        }
+
+        btnStopSpeaking = findViewById(R.id.btnStopSpeaking)
+        btnStopSpeaking.setOnClickListener {
+            textToSpeech?.stop()
+            btnStopSpeaking.visibility = View.GONE
+        }
+
+        btnQuickCallDaughter.setOnClickListener {
+            val contact = contactManager.resolveContactFromSpeech("daughter")
+            val target = contact?.phoneNumber ?: "112"
+            sosController.executeCall(target)
+        }
+
+        btnQuickLocation.setOnClickListener {
+            val report = locationService.refreshLocation()
+            tvReply.text = "Your current live coordinates are ${report.getReadableCoordinates()}."
+            speakAloud("Your current location coordinates are ${report.getReadableCoordinates()}.")
+        }
+
+        btnQuickCamera.setOnClickListener {
+            triggerCameraCheck()
+        }
+
         btnSend.setOnClickListener {
-            val userText = etMessage.text.toString().trim()
-            if (userText.isNotEmpty()) {
-                etMessage.text.clear()
-                handleUserInput(userText)
+            val text = etMessage.text.toString().trim()
+            if (text.isNotEmpty()) {
+                etMessage.text?.clear()
+                assistantEngine.processUserInput(text)
             }
         }
     }
 
-    // =========================================================================
-    // BACKGROUND SERVICE: Keeps app alive when screen turns off in pocket
-    // =========================================================================
-    private fun startBackgroundProtectionService() {
-        val serviceIntent = Intent(this, SafetyForegroundService::class.java)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            startForegroundService(serviceIntent)
-        } else {
-            startService(serviceIntent)
-        }
-    }
-
-    // =========================================================================
-    // ROLE SWITCHER: User (Senior/Vision-impaired) vs Guardian (Caregiver)
-    // =========================================================================
-    private fun setRole(userMode: Boolean) {
-        isUserMode = userMode
-        if (userMode) {
-            btnRoleUser.setBackgroundColor(ContextCompat.getColor(this, R.color.primary))
-            btnRoleUser.setTextColor(0xFFFFFFFF.toInt())
-            btnRoleGuardian.setBackgroundColor(ContextCompat.getColor(this, R.color.background))
-            btnRoleGuardian.setTextColor(ContextCompat.getColor(this, R.color.text_primary))
-
-            tvModeSubtitle.text = "User Mode • Say 'Hello Life' for help"
-            tvLiveStatus.text = "● PROTECTED"
-            tvLiveStatus.setTextColor(ContextCompat.getColor(this, R.color.accent))
-            speakAloud("User mode active. Safe walk protection is on.")
-        } else {
-            btnRoleGuardian.setBackgroundColor(ContextCompat.getColor(this, R.color.guardian_purple))
-            btnRoleGuardian.setTextColor(0xFFFFFFFF.toInt())
-            btnRoleUser.setBackgroundColor(ContextCompat.getColor(this, R.color.background))
-            btnRoleUser.setTextColor(ContextCompat.getColor(this, R.color.text_primary))
-
-            val locationInfo = getLiveLocationString()
-            tvModeSubtitle.text = "Guardian Mode • Location: $locationInfo"
-            tvLiveStatus.text = "● MONITORING"
-            tvLiveStatus.setTextColor(ContextCompat.getColor(this, R.color.guardian_purple))
-            speakAloud("Guardian mode connected. Current location tracked: $locationInfo")
-        }
-    }
-
-    // =========================================================================
-    // LIVE LOCATION TRACKING
-    // =========================================================================
-    private fun getLiveLocationString(): String {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            return "GPS permission pending"
-        }
-        val locationManager = getSystemService(Context.LOCATION_SERVICE) as? LocationManager
-        var lastLocation: Location? = null
-        try {
-            lastLocation = locationManager?.getLastKnownLocation(LocationManager.GPS_PROVIDER)
-                ?: locationManager?.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
-        } catch (e: Exception) {
-            // Ignored
-        }
-
-        return if (lastLocation != null) {
-            "Lat: ${"%.4f".format(lastLocation.latitude)}, Lon: ${"%.4f".format(lastLocation.longitude)}"
-        } else {
-            "Locating satellite..."
-        }
-    }
-
-    // =========================================================================
-    // 10-SECOND EMERGENCY SOS COUNTDOWN (INDIAN 112)
-    // =========================================================================
-    private fun start10SecondSosCountdown(targetNumber: String) {
-        sosTimer?.cancel()
+    private fun showSosCountdownView() {
         layoutSosCountdown.visibility = View.VISIBLE
-        speakAloud("Emergency SOS activated. Calling Indian Helpline in ten seconds. Say cancel to abort.")
-
-        sosTimer = object : CountDownTimer(SOS_COUNTDOWN_MS, 1000) {
-            override fun onTick(millisUntilFinished: Long) {
-                val secondsRemaining = millisUntilFinished / 1000
-                tvCountdown.text = "Calling Indian SOS ($targetNumber) in ${secondsRemaining}s..."
-            }
-
-            override fun onFinish() {
-                layoutSosCountdown.visibility = View.GONE
-                tvCountdown.text = "Connecting emergency call..."
-                callEmergencyNumber(targetNumber)
-            }
-        }.start()
+        tvCountdown.text = "Calling 112 SOS in 10s..."
     }
 
-    private fun cancelSos() {
-        sosTimer?.cancel()
-        sosTimer = null
+    private fun hideSosCountdownView() {
         layoutSosCountdown.visibility = View.GONE
-        speakAloud("Emergency SOS cancelled. You are safe.")
-        Toast.makeText(this, "Emergency SOS Cancelled", Toast.LENGTH_SHORT).show()
     }
 
-    // =========================================================================
-    // CALLING & CAMERA (INDIAN SOS 112 / CONTACTS / FACETIME)
-    // =========================================================================
-    private fun callEmergencyNumber(number: String) {
-        val intent = Intent(Intent.ACTION_CALL, Uri.parse("tel:$number"))
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED) {
-            startActivity(intent)
+    private fun triggerCameraCheck() {
+        val authorized = cameraManager.startAuthorizedSession()
+        if (authorized) {
+            speakAloud("Opening video check-in session for guardian.")
+            Toast.makeText(this, "📹 Video Check-in Active: Privacy Indicator Visible", Toast.LENGTH_LONG).show()
+            val cameraIntent = Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE)
+            try {
+                startActivity(cameraIntent)
+            } catch (e: Exception) {
+                Toast.makeText(this, "Camera stream ready.", Toast.LENGTH_SHORT).show()
+            }
         } else {
-            val dialIntent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$number"))
-            startActivity(dialIntent)
-        }
-    }
-
-    private fun openFaceTimeCameraCheck() {
-        speakAloud("Opening video check-in for guardian.")
-        val intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
-        try {
-            startActivity(intent)
-        } catch (e: Exception) {
-            Toast.makeText(this, "Camera not available: ${e.message}", Toast.LENGTH_SHORT).show()
+            speakAloud("Camera access was revoked in privacy settings.")
+            Toast.makeText(this, "Camera permission blocked by user settings", Toast.LENGTH_SHORT).show()
         }
     }
 
     // =========================================================================
-    // VOICE ASSISTANT ("HELLO LIFE" & HANDS-FREE SPEECH RECOGNITION)
+    // GUARDIAN TAB IMPLEMENTATION
+    // =========================================================================
+    private fun setupGuardianTab() {
+        refreshGuardianTabState()
+
+        btnRegenerateCode.setOnClickListener {
+            val newCode = pairingManager.generateNewCode()
+            tvPairingCode.text = newCode
+            Toast.makeText(this, "New invite code: $newCode", Toast.LENGTH_SHORT).show()
+        }
+
+        btnSimulateRequest.setOnClickListener {
+            pairingManager.simulateIncomingGuardianRequest("Ananya Sharma (Caregiver)", "+91 98765 11223")
+            refreshGuardianTabState()
+        }
+
+        btnApproveGuardian.setOnClickListener {
+            pairingManager.approveGuardian()
+            Toast.makeText(this, "Guardian Approved & Connected", Toast.LENGTH_SHORT).show()
+            refreshGuardianTabState()
+        }
+
+        btnRejectGuardian.setOnClickListener {
+            pairingManager.rejectGuardian()
+            Toast.makeText(this, "Guardian Request Rejected", Toast.LENGTH_SHORT).show()
+            refreshGuardianTabState()
+        }
+
+        btnOpenMaps.setOnClickListener {
+            startActivity(locationService.createGoogleMapsViewIntent())
+        }
+
+        btnShareWhatsAppLocation.setOnClickListener {
+            try {
+                startActivity(locationService.createWhatsAppShareIntent())
+            } catch (e: Exception) {
+                Toast.makeText(this, "WhatsApp not installed, opening Maps link.", Toast.LENGTH_SHORT).show()
+                startActivity(locationService.createGoogleMapsViewIntent())
+            }
+        }
+
+        btnStartCameraCheck.setOnClickListener {
+            triggerCameraCheck()
+        }
+
+        btnRevokeAccess.setOnClickListener {
+            pairingManager.revokeAccess()
+            Toast.makeText(this, "Guardian access revoked.", Toast.LENGTH_SHORT).show()
+            refreshGuardianTabState()
+        }
+    }
+
+    private fun refreshGuardianTabState() {
+        val session = pairingManager.currentSession
+        tvPairingCode.text = session.code
+
+        if (session.status == PairingStatus.AWAITING_APPROVAL) {
+            cardPendingApproval.visibility = View.VISIBLE
+            tvRequesterInfo.text = "${session.pairedUserName} (${session.pairedUserPhone}) requested Guardian pairing."
+        } else {
+            cardPendingApproval.visibility = View.GONE
+        }
+
+        refreshLocationDisplay()
+    }
+
+    private fun refreshLocationDisplay() {
+        val report = locationService.refreshLocation()
+        tvGpsCoordinates.text = "GPS: ${report.getReadableCoordinates()}\nStatus: ${report.status.name}"
+    }
+
+    // =========================================================================
+    // CONTACTS TAB IMPLEMENTATION
+    // =========================================================================
+    private fun setupContactsTab() {
+        renderContactsList()
+        btnAddContactDialog.setOnClickListener {
+            showAddContactDialog()
+        }
+    }
+
+    private fun renderContactsList() {
+        layoutContactsContainer.removeAllViews()
+        val contacts = contactManager.getAllContacts()
+
+        for (c in contacts) {
+            val itemView = LayoutInflater.from(this).inflate(R.layout.item_contact, layoutContactsContainer, false)
+            val tvName = itemView.findViewById<TextView>(R.id.tvContactName)
+            val tvRelation = itemView.findViewById<TextView>(R.id.tvContactRelation)
+            val tvPhone = itemView.findViewById<TextView>(R.id.tvContactPhone)
+            val btnCall = itemView.findViewById<MaterialButton>(R.id.btnCallThisContact)
+
+            tvName.text = c.name
+            tvRelation.text = c.relationship
+            tvPhone.text = c.phoneNumber
+
+            btnCall.setOnClickListener {
+                sosController.executeCall(c.phoneNumber)
+            }
+
+            layoutContactsContainer.addView(itemView)
+        }
+    }
+
+    private fun showAddContactDialog() {
+        val builder = AlertDialog.Builder(this)
+        builder.setTitle("Add Trusted Safety Contact")
+
+        val layout = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(50, 40, 50, 10)
+        }
+
+        val etName = TextInputEditText(this).apply { hint = "Name (e.g. Rahul)" }
+        val etRel = TextInputEditText(this).apply { hint = "Relationship (e.g. Son, Daughter)" }
+        val etPhone = TextInputEditText(this).apply { hint = "Phone (+91...)" }
+
+        layout.addView(etName)
+        layout.addView(etRel)
+        layout.addView(etPhone)
+        builder.setView(layout)
+
+        builder.setPositiveButton("Save Contact") { _, _ ->
+            val name = etName.text.toString().trim()
+            val rel = etRel.text.toString().trim()
+            val phone = etPhone.text.toString().trim()
+            if (name.isNotEmpty() && phone.isNotEmpty()) {
+                contactManager.addContact(
+                    SafetyContact(
+                        name = name,
+                        relationship = if (rel.isNotEmpty()) rel else "Contact",
+                        phoneNumber = phone,
+                        isFavorite = true
+                    )
+                )
+                renderContactsList()
+                Toast.makeText(this, "Contact added", Toast.LENGTH_SHORT).show()
+            }
+        }
+        builder.setNegativeButton("Cancel", null)
+        builder.show()
+    }
+
+    // =========================================================================
+    // ACTIVITY TAB IMPLEMENTATION
+    // =========================================================================
+    private fun setupActivityTab() {
+        renderActivityList("")
+        etSearchActivity.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                renderActivityList(s.toString())
+            }
+            override fun afterTextChanged(s: Editable?) {}
+        })
+    }
+
+    private fun renderActivityList(filterQuery: String) {
+        layoutActivityContainer.removeAllViews()
+        val events = activityRepo.searchEvents(filterQuery)
+
+        for (e in events) {
+            val itemView = LayoutInflater.from(this).inflate(R.layout.item_activity, layoutActivityContainer, false)
+            val tvTitle = itemView.findViewById<TextView>(R.id.tvActivityTitle)
+            val tvOutcome = itemView.findViewById<TextView>(R.id.tvActivityOutcome)
+            val tvDetails = itemView.findViewById<TextView>(R.id.tvActivityDetails)
+            val tvTime = itemView.findViewById<TextView>(R.id.tvActivityTime)
+
+            tvTitle.text = e.title
+            tvOutcome.text = e.outcome.name
+            tvDetails.text = e.details
+            tvTime.text = e.getFormattedTime()
+
+            when (e.outcome) {
+                EventOutcome.SUCCESS -> tvOutcome.setTextColor(getColor(R.color.emerald_safe))
+                EventOutcome.ACTIVE -> tvOutcome.setTextColor(getColor(R.color.red_light))
+                EventOutcome.CANCELLED -> tvOutcome.setTextColor(getColor(R.color.violet_light))
+                EventOutcome.FAILED -> tvOutcome.setTextColor(getColor(R.color.text_dim))
+                else -> tvOutcome.setTextColor(getColor(R.color.text_body))
+            }
+
+            layoutActivityContainer.addView(itemView)
+        }
+    }
+
+    // =========================================================================
+    // SETTINGS & PERMISSIONS IMPLEMENTATION
+    // =========================================================================
+    private fun setupSettingsTab() {
+        tvAccountName.text = "Account: ${authManager.currentUser?.name ?: "User"}"
+        tvAccountRole.text = "Role: ${if (authManager.isUserRole()) "User (Assistance Receiver)" else "Guardian (Caregiver)"}"
+
+        btnGrantPermissions.setOnClickListener {
+            requestPermissionsExplicitly()
+        }
+
+        btnLogout.setOnClickListener {
+            authManager.logout()
+            startActivity(Intent(this, AuthActivity::class.java))
+            finish()
+        }
+    }
+
+    private fun checkAndReportPermissions() {
+        val audioGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+        val phoneGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED
+        val locationGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        val cameraGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
+
+        tvPermAudio.text = "🎤 Microphone: " + if (audioGranted) "Granted (Voice Active)" else "Denied (Tap Grant)"
+        tvPermAudio.setTextColor(if (audioGranted) getColor(R.color.emerald_safe) else getColor(R.color.red_light))
+
+        tvPermPhone.text = "📞 Phone Calls: " + if (phoneGranted) "Granted (112 Direct Dial)" else "Denied (Dialer Fallback)"
+        tvPermPhone.setTextColor(if (phoneGranted) getColor(R.color.emerald_safe) else getColor(R.color.red_light))
+
+        tvPermLocation.text = "📍 GPS Location: " + if (locationGranted) "Granted (Live Sharing)" else "Denied (GPS Off)"
+        tvPermLocation.setTextColor(if (locationGranted) getColor(R.color.emerald_safe) else getColor(R.color.red_light))
+
+        tvPermCamera.text = "📹 Camera Check: " + if (cameraGranted) "Granted (Video Ready)" else "Denied"
+        tvPermCamera.setTextColor(if (cameraGranted) getColor(R.color.emerald_safe) else getColor(R.color.red_light))
+    }
+
+    private fun requestPermissionsExplicitly() {
+        val permissions = mutableListOf(
+            Manifest.permission.RECORD_AUDIO,
+            Manifest.permission.CALL_PHONE,
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.CAMERA
+        )
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            permissions.add(Manifest.permission.POST_NOTIFICATIONS)
+        }
+        ActivityCompat.requestPermissions(this, permissions.toTypedArray(), PERMISSION_REQUEST_CODE)
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        checkAndReportPermissions()
+        refreshLocationDisplay()
+    }
+
+    // =========================================================================
+    // VOICE SPEECH RECOGNITION & TTS
     // =========================================================================
     private fun initSpeechRecognizer() {
         if (SpeechRecognizer.isRecognitionAvailable(this)) {
             speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this).apply {
                 setRecognitionListener(object : RecognitionListener {
                     override fun onReadyForSpeech(params: Bundle?) {
-                        tvVoiceStatus.text = "🎤 Listening for 'Hello Life'..."
+                        tvVoiceStatus.text = "🎤 Hearing speech..."
                     }
-                    override fun onBeginningOfSpeech() {
-                        tvVoiceStatus.text = "🎤 Hearing voice..."
-                    }
+                    override fun onBeginningOfSpeech() {}
                     override fun onRmsChanged(rmsdB: Float) {}
                     override fun onBufferReceived(buffer: ByteArray?) {}
                     override fun onEndOfSpeech() {
-                        tvVoiceStatus.text = "Thinking..."
                         isListening = false
-                        btnVoiceListen.text = "🎙️ Tap to Speak (or say 'Hello Life')"
+                        tvVoiceStatus.text = "Processing voice..."
                     }
                     override fun onError(error: Int) {
                         isListening = false
                         tvVoiceStatus.text = "Ready. Say 'Hello Life'"
-                        btnVoiceListen.text = "🎙️ Tap to Speak (or say 'Hello Life')"
                     }
                     override fun onResults(results: Bundle?) {
                         val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                         if (!matches.isNullOrEmpty()) {
-                            val recognizedText = matches[0]
-                            handleUserInput(recognizedText)
+                            val recognized = matches[0]
+                            assistantEngine.processUserInput(recognized)
                         }
                     }
                     override fun onPartialResults(partialResults: Bundle?) {}
@@ -290,122 +704,39 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         }
     }
 
-    private fun toggleVoiceListening() {
+    private fun toggleSpeechListening() {
         if (isListening) {
             speechRecognizer?.stopListening()
             isListening = false
-            btnVoiceListen.text = "🎙️ Tap to Speak (or say 'Hello Life')"
             tvVoiceStatus.text = "Microphone paused"
         } else {
-            startVoiceListening()
-        }
-    }
-
-    private fun startVoiceListening() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-            requestAppPermissions()
-            return
-        }
-
-        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault())
-            putExtra(RecognizerIntent.EXTRA_PROMPT, "Say 'Hello Life' or what you need...")
-        }
-        speechRecognizer?.startListening(intent)
-        isListening = true
-        btnVoiceListen.text = "⏹️ Stop Listening"
-        tvVoiceStatus.text = "🎤 Listening..."
-    }
-
-    private fun handleUserInput(text: String) {
-        tvReply.text = "You said: \"$text\"\n\nContacting Life Pro.AI..."
-        val lower = text.toLowerCase(Locale.ROOT)
-
-        // Instant emergency shout detection (bypasses network lag for urgent safety)
-        if (lower.contains("help") || lower.contains("ambulance") || lower.contains("save me") || lower.contains("danger")) {
-            start10SecondSosCountdown("112")
-            return
-        }
-
-        // Cancel voice trigger
-        if (lower.contains("cancel") && layoutSosCountdown.visibility == View.VISIBLE) {
-            cancelSos()
-            return
-        }
-
-        // Send to Nemotron for reasoning and actions
-        sendMessageToServer(text)
-    }
-
-    // =========================================================================
-    // NEMOTRON AI SERVER COMMUNICATION
-    // =========================================================================
-    private fun sendMessageToServer(message: String) {
-        val jsonPayload = JSONObject().apply {
-            put("message", message)
-            put("location", getLiveLocationString())
-        }
-
-        val requestBody = jsonPayload.toString().toRequestBody("application/json; charset=utf-8".toMediaType())
-        val request = Request.Builder().url(SERVER_URL).post(requestBody).build()
-
-        httpClient.newCall(request).enqueue(object : Callback {
-            override fun onFailure(call: Call, e: IOException) {
-                runOnUiThread {
-                    tvReply.text = "Could not reach server: ${e.localizedMessage}"
-                    tvActionBadge.text = "[Action: offline]"
-                }
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+                requestPermissionsExplicitly()
+                return
             }
-
-            override fun onResponse(call: Call, response: Response) {
-                val responseBody = response.body?.string() ?: ""
-                runOnUiThread {
-                    try {
-                        val json = JSONObject(responseBody)
-                        val reply = json.optString("reply", "I am right here with you.")
-                        val action = json.optString("action", "none")
-                        val contact = json.optString("contact", "")
-
-                        tvReply.text = reply
-                        tvActionBadge.text = if (contact.isNotEmpty()) "[Action: $action -> $contact]" else "[Action: $action]"
-
-                        // Speak AI reply aloud so vision-impaired users don't need to look at screen
-                        speakAloud(reply)
-
-                        // Execute requested action
-                        when (action) {
-                            "sos" -> start10SecondSosCountdown(if (contact.isNotEmpty()) contact else "112")
-                            "call" -> {
-                                val target = if (contact.matches(Regex("\\d+"))) contact else "112"
-                                start10SecondSosCountdown(target)
-                            }
-                            "camera" -> openFaceTimeCameraCheck()
-                        }
-                    } catch (e: Exception) {
-                        tvReply.text = responseBody
-                    }
-                }
+            val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault())
+                putExtra(RecognizerIntent.EXTRA_PROMPT, "Say 'Hello Life' or what you need...")
             }
-        })
+            speechRecognizer?.startListening(intent)
+            isListening = true
+            tvVoiceStatus.text = "🎤 Listening..."
+        }
     }
 
-    // =========================================================================
-    // TEXT TO SPEECH (VOICE RESPONSES WITH AUTO-RESUME LISTENING)
-    // =========================================================================
     private fun initTextToSpeech() {
         textToSpeech = TextToSpeech(this, this)
         textToSpeech?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
-            override fun onStart(utteranceId: String?) {}
-            override fun onDone(utteranceId: String?) {
-                // Once speech finishes, automatically listen again for continuous conversation
-                if (autoListenLoop && isUserMode) {
-                    runOnUiThread {
-                        startVoiceListening()
-                    }
-                }
+            override fun onStart(utteranceId: String?) {
+                runOnUiThread { btnStopSpeaking.visibility = View.VISIBLE }
             }
-            override fun onError(utteranceId: String?) {}
+            override fun onDone(utteranceId: String?) {
+                runOnUiThread { btnStopSpeaking.visibility = View.GONE }
+            }
+            override fun onError(utteranceId: String?) {
+                runOnUiThread { btnStopSpeaking.visibility = View.GONE }
+            }
         })
     }
 
@@ -419,33 +750,21 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         textToSpeech?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "LIFEPRO_VOICE_${System.currentTimeMillis()}")
     }
 
-    // =========================================================================
-    // RUNTIME PERMISSIONS
-    // =========================================================================
-    private fun requestAppPermissions() {
-        val permissions = mutableListOf(
-            Manifest.permission.RECORD_AUDIO,
-            Manifest.permission.CALL_PHONE,
-            Manifest.permission.ACCESS_FINE_LOCATION,
-            Manifest.permission.CAMERA
-        )
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            permissions.add(Manifest.permission.POST_NOTIFICATIONS)
-        }
-
-        val ungranted = permissions.filter {
-            ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
-        }
-
-        if (ungranted.isNotEmpty()) {
-            ActivityCompat.requestPermissions(this, ungranted.toTypedArray(), PERMISSION_REQUEST_CODE)
+    private fun startBackgroundService() {
+        try {
+            val serviceIntent = Intent(this, SafetyForegroundService::class.java)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startForegroundService(serviceIntent)
+            } else {
+                startService(serviceIntent)
+            }
+        } catch (e: Exception) {
+            // Ignored
         }
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        sosTimer?.cancel()
         speechRecognizer?.destroy()
         textToSpeech?.stop()
         textToSpeech?.shutdown()

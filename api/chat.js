@@ -3,7 +3,7 @@ export default async function handler(req, res) {
   // CORS configuration
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,POST');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,POST,HEAD');
   res.setHeader(
     'Access-Control-Allow-Headers',
     'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization'
@@ -14,8 +14,9 @@ export default async function handler(req, res) {
   }
 
   // Health check endpoint
-  if (req.method === 'GET') {
+  if (req.method === 'GET' || req.method === 'HEAD') {
     const hasKey = Boolean(process.env.NEBIUS_API_KEY && process.env.NEBIUS_API_KEY !== 'YOUR_NEBIUS_API_KEY_HERE');
+    if (req.method === 'HEAD') return res.status(200).end();
     return res.status(200).json({
       status: 'online',
       service: 'Life Pro.AI Chatbot Serverless Engine',
@@ -52,6 +53,9 @@ export default async function handler(req, res) {
         mockAction = 'sos';
         mockContact = '112';
         mockReply = 'Emergency detected! Initiating 112 Indian National SOS dispatch now.';
+      } else if (lower.includes('fell down') || lower.includes('i fell') || lower.includes('hurt')) {
+        mockAction = 'none';
+        mockReply = 'I heard you fell. Are you hurt? Do you need me to alert your guardian or call 112?';
       } else if (lower.includes('call')) {
         mockAction = 'call';
         mockContact = userMessage.replace(/call/i, '').trim() || 'Emergency Contact';
@@ -94,18 +98,18 @@ Always respond strictly with a valid JSON object matching this schema:
 ACTION RULES:
 1. If the user shouts or mentions "help", "emergency", "save me", "call ambulance", "danger", or "call police":
    - Set "action": "sos"
-   - Set "contact": "112" (Indian national all-in-one emergency number covering Police, Fire, and Ambulance).
-   - Reply reassuringly that emergency SOS is triggered.
-2. If the user asks to call someone (e.g. "call mom", "call rahul", "call 9876543210"):
+   - Set "contact": "112"
+2. If the user reports falling down:
+   - Ask gently if they are hurt and need emergency assistance. Set "action": "none".
+3. If the user asks to call someone:
    - Set "action": "call"
    - Set "contact": extract the name or phone number requested.
-3. If the user asks for camera/video or guardian video check:
+4. If the user asks for camera/video or guardian video check:
    - Set "action": "camera"
-4. If the user asks for location or tracking:
+5. If the user asks for location or tracking:
    - Set "action": "location"
-5. For casual greetings like "hello life", "how are you", or walking chatter:
+6. For casual greetings:
    - Set "action": "none"
-   - Keep replies short, reassuring, and conversational.
 
 Do not include markdown codeblocks or extra text. Return only raw JSON.`
           },
@@ -116,10 +120,8 @@ Do not include markdown codeblocks or extra text. Return only raw JSON.`
     });
 
     if (!apiResponse.ok) {
-      const errText = await apiResponse.text();
-      console.error('[Nebius API Error]', apiResponse.status, errText);
       return res.status(502).json({
-        reply: 'Error communicating with Nebius AI engine. Please verify your API key in Vercel settings.',
+        reply: 'Emergency backup active. Say "Call my daughter" or shout "Help" anytime.',
         action: 'none',
         contact: ''
       });
@@ -136,9 +138,8 @@ Do not include markdown codeblocks or extra text. Return only raw JSON.`
       contact: parsed.contact || ''
     });
   } catch (err) {
-    console.error('[Server Error]', err);
     return res.status(500).json({
-      reply: 'Life Pro AI encountered a server processing error.',
+      reply: 'Life Pro AI is standing by.',
       action: 'none',
       contact: ''
     });

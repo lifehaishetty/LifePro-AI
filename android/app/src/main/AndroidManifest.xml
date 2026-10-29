@@ -41,6 +41,10 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".ui.AuthActivity"
+            android:exported="false" />
+
         <!-- Background Safety Service -->
         <service
             android:name=".SafetyForegroundService"

@@ -1,276 +1,882 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/background"
-    android:fillViewport="true">
+    android:orientation="vertical"
+    android:background="@color/bg_dark">
 
+    <!-- Header Bar -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="16dp">
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="20dp"
+        android:paddingTop="16dp"
+        android:paddingBottom="12dp"
+        android:background="@color/bg_dark">
 
-        <!-- Header -->
+        <FrameLayout
+            android:layout_width="38dp"
+            android:layout_height="38dp"
+            android:background="@drawable/badge_bg">
+            <ImageView
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:layout_gravity="center"
+                android:src="@drawable/ic_shield"
+                app:tint="@color/violet_light"
+                android:contentDescription="LifePro Logo" />
+        </FrameLayout>
+
         <LinearLayout
-            android:layout_width="match_parent"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:layout_marginTop="8dp"
-            android:layout_marginBottom="12dp">
-
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Life Pro.AI"
-                    android:textSize="24sp"
-                    android:textStyle="bold"
-                    android:textColor="@color/primary" />
-
-                <TextView
-                    android:id="@+id/tvModeSubtitle"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="User Mode • Say 'Hello Life'"
-                    android:textSize="12sp"
-                    android:textColor="@color/text_secondary" />
-            </LinearLayout>
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:layout_marginStart="12dp">
 
             <TextView
-                android:id="@+id/tvLiveStatus"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:background="@drawable/badge_bg"
-                android:paddingHorizontal="10dp"
-                android:paddingVertical="4dp"
-                android:text="● PROTECTED"
-                android:textSize="11sp"
+                android:text="LifePro.AI"
+                android:textSize="18sp"
+                android:textColor="@color/text_title"
                 android:textStyle="bold"
-                android:textColor="@color/accent" />
+                android:letterSpacing="-0.02" />
+
+            <TextView
+                android:id="@+id/tvModeSubtitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="User Mode • Voice Active"
+                android:textSize="12sp"
+                android:textColor="@color/text_muted" />
         </LinearLayout>
 
-        <!-- Role Selector: User vs Guardian -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="44dp"
-            android:orientation="horizontal"
-            android:background="@color/card_bg"
-            android:padding="3dp"
-            android:layout_marginBottom="14dp">
-
-            <Button
-                android:id="@+id/btnRoleUser"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_weight="1"
-                android:backgroundTint="@color/primary"
-                android:text="I am User"
-                android:textAllCaps="false"
-                android:textSize="13sp"
-                android:textColor="#FFFFFF" />
-
-            <Button
-                android:id="@+id/btnRoleGuardian"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_weight="1"
-                android:backgroundTint="@color/background"
-                android:text="I am Guardian"
-                android:textAllCaps="false"
-                android:textSize="13sp"
-                android:textColor="@color/text_primary" />
-        </LinearLayout>
-
-        <!-- 10-Second SOS Countdown Alert Card (Visible when SOS triggers) -->
-        <LinearLayout
-            android:id="@+id/layoutSosCountdown"
-            android:layout_width="match_parent"
+        <TextView
+            android:id="@+id/tvLiveStatus"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:background="@drawable/badge_bg"
+            android:paddingHorizontal="10dp"
+            android:paddingVertical="5dp"
+            android:text="● PROTECTED"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:textColor="@color/emerald_safe" />
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/border_subtle" />
+
+    <!-- Content Area (Scrollable container for pages) -->
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <!-- ================================================================= -->
+        <!-- DESTINATION 1: ASSISTANT TAB                                      -->
+        <!-- ================================================================= -->
+        <ScrollView
+            android:id="@+id/tabViewAssistant"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:fillViewport="true">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="20dp">
+
+                <!-- 10-Second SOS Countdown Alert Card (Visible when SOS triggers) -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/layoutSosCountdown"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    style="@style/Widget.LifePro.Card.Emergency"
+                    android:layout_marginBottom="16dp"
+                    android:visibility="gone">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="18dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="⚠️ EMERGENCY SOS IN PROGRESS"
+                            android:textSize="13sp"
+                            android:textStyle="bold"
+                            android:textColor="#FFFFFF" />
+
+                        <TextView
+                            android:id="@+id/tvCountdown"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Calling 112 Helpline in 10s..."
+                            android:textSize="22sp"
+                            android:textStyle="bold"
+                            android:textColor="#FEF08A"
+                            android:layout_marginVertical="10dp" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnCancelSos"
+                            android:layout_width="match_parent"
+                            android:layout_height="52dp"
+                            android:backgroundTint="#FFFFFF"
+                            android:text="CANCEL SOS (FALSE ALARM)"
+                            android:textColor="@color/red_emergency"
+                            android:textSize="15sp"
+                            android:textStyle="bold"
+                            app:cornerRadius="12dp" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- Commanding 112 Emergency SOS Button -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnTriggerSos"
+                    android:layout_width="match_parent"
+                    android:layout_height="62dp"
+                    style="@style/Widget.LifePro.Button.Emergency"
+                    android:text="🚨 TRIGGER 112 EMERGENCY SOS"
+                    android:textSize="16sp"
+                    android:letterSpacing="0.02"
+                    android:layout_marginBottom="20dp" />
+
+                <!-- Conversational AI Assistant Card -->
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    style="@style/Widget.LifePro.Card.Violet"
+                    android:layout_marginBottom="20dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="20dp"
+                        android:gravity="center_horizontal">
+
+                        <!-- Orb Pulsing Microphone Button -->
+                        <FrameLayout
+                            android:id="@+id/btnVoiceOrb"
+                            android:layout_width="96dp"
+                            android:layout_height="96dp"
+                            android:background="@drawable/bg_orb_violet"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:layout_marginBottom="16dp">
+
+                            <ImageView
+                                android:id="@+id/ivOrbIcon"
+                                android:layout_width="40dp"
+                                android:layout_height="40dp"
+                                android:layout_gravity="center"
+                                android:src="@drawable/ic_mic"
+                                app:tint="#FFFFFF"
+                                android:contentDescription="Microphone Listen" />
+                        </FrameLayout>
+
+                        <TextView
+                            android:id="@+id/tvVoiceStatus"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="🎤 Listening for 'Hello Life'..."
+                            android:textSize="13sp"
+                            android:textColor="@color/violet_light"
+                            android:textStyle="bold"
+                            android:layout_marginBottom="12dp" />
+
+                        <TextView
+                            android:id="@+id/tvReply"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:minHeight="54dp"
+                            android:text="I am LifePro. Say 'Call my daughter', 'Where am I', or shout 'Help' anytime."
+                            android:textSize="15sp"
+                            android:textColor="@color/text_title"
+                            android:lineSpacingExtra="4dp"
+                            android:gravity="center"
+                            android:layout_marginBottom="14dp" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnStopSpeaking"
+                            android:layout_width="wrap_content"
+                            android:layout_height="38dp"
+                            style="@style/Widget.LifePro.Button.Secondary"
+                            android:text="Stop Speech Audio"
+                            android:textSize="12sp"
+                            android:visibility="gone"
+                            android:layout_marginBottom="6dp" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- Quick Assistance Chips -->
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="QUICK ASSISTANCE"
+                    android:textSize="11sp"
+                    android:textColor="@color/text_dim"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.08"
+                    android:layout_marginBottom="10dp" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="20dp">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnQuickCallDaughter"
+                        android:layout_width="0dp"
+                        android:layout_height="48dp"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="6dp"
+                        style="@style/Widget.LifePro.Button.Secondary"
+                        android:text="📞 Daughter"
+                        android:textSize="13sp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnQuickLocation"
+                        android:layout_width="0dp"
+                        android:layout_height="48dp"
+                        android:layout_weight="1"
+                        android:layout_marginHorizontal="4dp"
+                        style="@style/Widget.LifePro.Button.Secondary"
+                        android:text="📍 GPS Pin"
+                        android:textSize="13sp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnQuickCamera"
+                        android:layout_width="0dp"
+                        android:layout_height="48dp"
+                        android:layout_weight="1"
+                        android:layout_marginStart="6dp"
+                        style="@style/Widget.LifePro.Button.Secondary"
+                        android:text="📹 Check-In"
+                        android:textSize="13sp" />
+                </LinearLayout>
+
+                <!-- Silent Input Fallback -->
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="SILENT MODE (DISCREET TYPE)"
+                    android:textSize="11sp"
+                    android:textColor="@color/text_dim"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.08"
+                    android:layout_marginBottom="8dp" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:hint="Type message or command..."
+                        app:boxBackgroundColor="@color/bg_card"
+                        app:boxStrokeColor="@color/border_subtle"
+                        app:hintTextColor="@color/text_muted">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/etMessage"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="textCapSentences"
+                            android:textColor="@color/text_title"
+                            android:textSize="14sp" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnSend"
+                        android:layout_width="wrap_content"
+                        android:layout_height="54dp"
+                        android:layout_marginStart="8dp"
+                        style="@style/Widget.LifePro.Button.Primary"
+                        android:text="Send"
+                        android:textSize="14sp" />
+                </LinearLayout>
+
+            </LinearLayout>
+        </ScrollView>
+
+        <!-- ================================================================= -->
+        <!-- DESTINATION 2: CONNECTIONS / GUARDIAN TAB                         -->
+        <!-- ================================================================= -->
+        <ScrollView
+            android:id="@+id/tabViewGuardian"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="gone"
+            android:fillViewport="true">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="20dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Guardian Connections"
+                    android:textSize="22sp"
+                    android:textColor="@color/text_title"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvGuardianRoleSubtitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Secure peer pairing between user and trusted family caregiver."
+                    android:textSize="13sp"
+                    android:textColor="@color/text_muted"
+                    android:layout_marginBottom="20dp" />
+
+                <!-- User Pairing Card (Shows code for caregiver) -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/cardUserPairing"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    style="@style/Widget.LifePro.Card.Violet"
+                    android:layout_marginBottom="16dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="20dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="YOUR GUARDIAN PAIRING CODE"
+                            android:textSize="11sp"
+                            android:textColor="@color/violet_light"
+                            android:textStyle="bold"
+                            android:letterSpacing="0.08" />
+
+                        <TextView
+                            android:id="@+id/tvPairingCode"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="LP-782941"
+                            android:textSize="32sp"
+                            android:textColor="@color/text_title"
+                            android:textStyle="bold"
+                            android:fontFamily="monospace"
+                            android:layout_marginVertical="6dp" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Share this code with your trusted family guardian to grant monitored safety access."
+                            android:textSize="13sp"
+                            android:textColor="@color/text_body"
+                            android:layout_marginBottom="14dp" />
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal">
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnRegenerateCode"
+                                android:layout_width="0dp"
+                                android:layout_height="48dp"
+                                android:layout_weight="1"
+                                android:layout_marginEnd="6dp"
+                                style="@style/Widget.LifePro.Button.Secondary"
+                                android:text="New Code"
+                                android:textSize="13sp" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnSimulateRequest"
+                                android:layout_width="0dp"
+                                android:layout_height="48dp"
+                                android:layout_weight="1"
+                                android:layout_marginStart="6dp"
+                                style="@style/Widget.LifePro.Button.Primary"
+                                android:text="Test Guardian Link"
+                                android:textSize="13sp" />
+                        </LinearLayout>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- Pending Approval Card (Visible when Guardian requests connection) -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/cardPendingApproval"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    style="@style/Widget.LifePro.Card"
+                    android:layout_marginBottom="16dp"
+                    android:visibility="gone">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="18dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="🔔 CONNECTION REQUEST PENDING"
+                            android:textSize="12sp"
+                            android:textColor="@color/violet_light"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/tvRequesterInfo"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Ananya (+91 98765 11223) wants to connect as your Guardian."
+                            android:textSize="14sp"
+                            android:textColor="@color/text_title"
+                            android:textStyle="bold"
+                            android:layout_marginVertical="8dp" />
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal">
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnApproveGuardian"
+                                android:layout_width="0dp"
+                                android:layout_height="46dp"
+                                android:layout_weight="1"
+                                android:layout_marginEnd="6dp"
+                                style="@style/Widget.LifePro.Button.Primary"
+                                android:text="Approve" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnRejectGuardian"
+                                android:layout_width="0dp"
+                                android:layout_height="46dp"
+                                android:layout_weight="1"
+                                android:layout_marginStart="6dp"
+                                style="@style/Widget.LifePro.Button.Secondary"
+                                android:text="Reject" />
+                        </LinearLayout>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- Guardian Dashboard Controls (For Guardian Role or Linked Status) -->
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    style="@style/Widget.LifePro.Card"
+                    android:layout_marginBottom="16dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="18dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="LIVE LOCATION &amp; MAPS"
+                            android:textSize="11sp"
+                            android:textColor="@color/text_dim"
+                            android:textStyle="bold"
+                            android:letterSpacing="0.08" />
+
+                        <TextView
+                            android:id="@+id/tvGpsCoordinates"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="GPS: Fetching satellite lock..."
+                            android:textSize="15sp"
+                            android:textColor="@color/text_title"
+                            android:textStyle="bold"
+                            android:layout_marginVertical="6dp" />
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:layout_marginTop="8dp">
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnOpenMaps"
+                                android:layout_width="0dp"
+                                android:layout_height="46dp"
+                                android:layout_weight="1"
+                                android:layout_marginEnd="6dp"
+                                style="@style/Widget.LifePro.Button.Secondary"
+                                android:text="Google Maps"
+                                android:textSize="13sp" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnShareWhatsAppLocation"
+                                android:layout_width="0dp"
+                                android:layout_height="46dp"
+                                android:layout_weight="1"
+                                android:layout_marginStart="6dp"
+                                style="@style/Widget.LifePro.Button.Primary"
+                                android:text="Share WhatsApp"
+                                android:textSize="13sp" />
+                        </LinearLayout>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- Remote Camera Check-in Card -->
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    style="@style/Widget.LifePro.Card"
+                    android:layout_marginBottom="16dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="18dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="AUTHORIZED VIDEO CHECK-IN"
+                            android:textSize="11sp"
+                            android:textColor="@color/text_dim"
+                            android:textStyle="bold"
+                            android:letterSpacing="0.08" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Allows family guardian to visually confirm user safety. User display shows active streaming badge."
+                            android:textSize="13sp"
+                            android:textColor="@color/text_muted"
+                            android:layout_marginVertical="6dp" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnStartCameraCheck"
+                            android:layout_width="match_parent"
+                            android:layout_height="48dp"
+                            style="@style/Widget.LifePro.Button.Secondary"
+                            android:text="📹 Start Video Check-In Session"
+                            android:textSize="14sp" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnRevokeAccess"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    style="@style/Widget.LifePro.Button.Secondary"
+                    android:text="Revoke All Guardian Access"
+                    android:textColor="@color/red_light"
+                    android:textSize="13sp" />
+
+            </LinearLayout>
+        </ScrollView>
+
+        <!-- ================================================================= -->
+        <!-- DESTINATION 3: CONTACTS TAB                                       -->
+        <!-- ================================================================= -->
+        <ScrollView
+            android:id="@+id/tabViewContacts"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="gone"
+            android:fillViewport="true">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="20dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="16dp">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Safety Contacts"
+                        android:textSize="22sp"
+                        android:textColor="@color/text_title"
+                        android:textStyle="bold" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnAddContactDialog"
+                        android:layout_width="wrap_content"
+                        android:layout_height="40dp"
+                        style="@style/Widget.LifePro.Button.Primary"
+                        android:text="+ Add"
+                        android:textSize="12sp" />
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Natural voice calling (e.g. 'Call my daughter') and emergency fallback priority."
+                    android:textSize="13sp"
+                    android:textColor="@color/text_muted"
+                    android:layout_marginBottom="16dp" />
+
+                <!-- Container where contacts cards are inflated dynamically -->
+                <LinearLayout
+                    android:id="@+id/layoutContactsContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical" />
+
+            </LinearLayout>
+        </ScrollView>
+
+        <!-- ================================================================= -->
+        <!-- DESTINATION 4: ACTIVITY TAB                                       -->
+        <!-- ================================================================= -->
+        <LinearLayout
+            android:id="@+id/tabViewActivity"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
             android:orientation="vertical"
-            android:background="@color/sos_red_dark"
-            android:padding="16dp"
-            android:layout_marginBottom="14dp"
+            android:padding="20dp"
             android:visibility="gone">
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="EMERGENCY SOS IN PROGRESS"
-                android:textSize="14sp"
+                android:text="Activity &amp; Alerts"
+                android:textSize="22sp"
+                android:textColor="@color/text_title"
                 android:textStyle="bold"
-                android:textColor="#FFFFFF" />
+                android:layout_marginBottom="4dp" />
 
             <TextView
-                android:id="@+id/tvCountdown"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Calling 112 Indian SOS in 10s..."
-                android:textSize="20sp"
-                android:textStyle="bold"
-                android:textColor="#FEF08A"
-                android:layout_marginVertical="8dp" />
+                android:text="Real audit log of SOS triggers, calls placed, and location shares."
+                android:textSize="13sp"
+                android:textColor="@color/text_muted"
+                android:layout_marginBottom="16dp" />
 
-            <Button
-                android:id="@+id/btnCancelSos"
+            <!-- Search Field -->
+            <com.google.android.material.textfield.TextInputLayout
                 android:layout_width="match_parent"
-                android:layout_height="48dp"
-                android:backgroundTint="#FFFFFF"
-                android:text="CANCEL SOS (False Alarm)"
-                android:textColor="@color/sos_red_dark"
-                android:textStyle="bold" />
+                android:layout_height="wrap_content"
+                android:hint="Search safety events..."
+                app:boxBackgroundColor="@color/bg_card"
+                app:boxStrokeColor="@color/border_subtle"
+                app:hintTextColor="@color/text_muted"
+                android:layout_marginBottom="14dp">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etSearchActivity"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="text"
+                    android:textColor="@color/text_title"
+                    android:textSize="14sp" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- Scrollable List of Events -->
+            <ScrollView
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:fillViewport="true">
+
+                <LinearLayout
+                    android:id="@+id/layoutActivityContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical" />
+            </ScrollView>
         </LinearLayout>
 
-        <!-- Instant SOS Button (One-tap Indian 112) -->
-        <Button
-            android:id="@+id/btnTriggerSos"
+        <!-- ================================================================= -->
+        <!-- DESTINATION 5: SETTINGS & PERMISSIONS TAB                         -->
+        <!-- ================================================================= -->
+        <ScrollView
+            android:id="@+id/tabViewSettings"
             android:layout_width="match_parent"
-            android:layout_height="56dp"
-            android:backgroundTint="@color/sos_red"
-            android:text="🚨 TRIGGER 112 INDIAN SOS"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:textColor="#FFFFFF"
-            android:layout_marginBottom="14dp" />
-
-        <!-- AI Assistant Conversation Card -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:background="@color/card_bg"
-            android:padding="14dp"
-            android:layout_marginBottom="14dp">
+            android:layout_height="match_parent"
+            android:visibility="gone"
+            android:fillViewport="true">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:layout_marginBottom="8dp">
+                android:orientation="vertical"
+                android:padding="20dp">
 
                 <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="AI Safety Assistant"
-                    android:textSize="13sp"
-                    android:textStyle="bold"
-                    android:textColor="@color/text_primary" />
-
-                <TextView
-                    android:id="@+id/tvActionBadge"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="[Action: none]"
-                    android:textSize="11sp"
-                    android:textColor="@color/primary"
-                    android:textStyle="bold" />
+                    android:text="Settings &amp; Permissions"
+                    android:textSize="22sp"
+                    android:textColor="@color/text_title"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="4dp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Transparency, permission checks, and background protection status."
+                    android:textSize="13sp"
+                    android:textColor="@color/text_muted"
+                    android:layout_marginBottom="20dp" />
+
+                <!-- Permissions Card -->
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    style="@style/Widget.LifePro.Card"
+                    android:layout_marginBottom="16dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="18dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="SYSTEM PERMISSIONS"
+                            android:textSize="11sp"
+                            android:textColor="@color/text_dim"
+                            android:textStyle="bold"
+                            android:letterSpacing="0.08"
+                            android:layout_marginBottom="12dp" />
+
+                        <TextView
+                            android:id="@+id/tvPermAudio"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="🎤 Microphone: Checking..."
+                            android:textSize="14sp"
+                            android:textColor="@color/text_title"
+                            android:layout_marginBottom="8dp" />
+
+                        <TextView
+                            android:id="@+id/tvPermPhone"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="📞 Phone Calling: Checking..."
+                            android:textSize="14sp"
+                            android:textColor="@color/text_title"
+                            android:layout_marginBottom="8dp" />
+
+                        <TextView
+                            android:id="@+id/tvPermLocation"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="📍 GPS Location: Checking..."
+                            android:textSize="14sp"
+                            android:textColor="@color/text_title"
+                            android:layout_marginBottom="8dp" />
+
+                        <TextView
+                            android:id="@+id/tvPermCamera"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="📹 Camera: Checking..."
+                            android:textSize="14sp"
+                            android:textColor="@color/text_title"
+                            android:layout_marginBottom="14dp" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnGrantPermissions"
+                            android:layout_width="match_parent"
+                            android:layout_height="48dp"
+                            style="@style/Widget.LifePro.Button.Secondary"
+                            android:text="Verify &amp; Request All Permissions" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- Account & Role Card -->
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    style="@style/Widget.LifePro.Card"
+                    android:layout_marginBottom="24dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="18dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="ACCOUNT DETAILS"
+                            android:textSize="11sp"
+                            android:textColor="@color/text_dim"
+                            android:textStyle="bold"
+                            android:letterSpacing="0.08"
+                            android:layout_marginBottom="8dp" />
+
+                        <TextView
+                            android:id="@+id/tvAccountName"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Name: LifePro Member"
+                            android:textSize="14sp"
+                            android:textColor="@color/text_title" />
+
+                        <TextView
+                            android:id="@+id/tvAccountRole"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Role: User (Senior / Vision-Impaired)"
+                            android:textSize="14sp"
+                            android:textColor="@color/violet_light"
+                            android:layout_marginTop="4dp"
+                            android:layout_marginBottom="14dp" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnLogout"
+                            android:layout_width="match_parent"
+                            android:layout_height="48dp"
+                            style="@style/Widget.LifePro.Button.Secondary"
+                            android:text="Switch Role / Log Out"
+                            android:textColor="@color/red_light" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
             </LinearLayout>
+        </ScrollView>
 
-            <TextView
-                android:id="@+id/tvReply"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:minHeight="60dp"
-                android:text="Ready. Say 'Hello Life' or shout 'Help' for Indian SOS."
-                android:textSize="15sp"
-                android:textColor="@color/text_primary"
-                android:lineSpacingExtra="3dp" />
+    </FrameLayout>
 
-            <TextView
-                android:id="@+id/tvVoiceStatus"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="🎤 Mic listening for 'Hello Life'..."
-                android:textSize="12sp"
-                android:textColor="@color/accent"
-                android:textStyle="bold" />
-        </LinearLayout>
+    <!-- Bottom Navigation Bar -->
+    <com.google.android.material.bottomnavigation.BottomNavigationView
+        android:id="@+id/bottomNav"
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
+        android:background="@color/bg_card"
+        app:itemIconTint="@color/violet_light"
+        app:itemTextColor="@color/text_title"
+        app:itemRippleColor="@color/violet_tint"
+        app:labelVisibilityMode="labeled"
+        app:menu="@menu/bottom_nav_menu" />
 
-        <!-- Quick Action Buttons -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginBottom="14dp">
-
-            <Button
-                android:id="@+id/btnQuickCall"
-                android:layout_width="0dp"
-                android:layout_height="50dp"
-                android:layout_weight="1"
-                android:layout_marginEnd="6dp"
-                android:backgroundTint="@color/card_bg"
-                android:text="📞 Call Contact"
-                android:textColor="@color/text_primary"
-                android:textSize="13sp" />
-
-            <Button
-                android:id="@+id/btnCameraCheck"
-                android:layout_width="0dp"
-                android:layout_height="50dp"
-                android:layout_weight="1"
-                android:layout_marginStart="6dp"
-                android:backgroundTint="@color/card_bg"
-                android:text="📹 FaceTime Check"
-                android:textColor="@color/text_primary"
-                android:textSize="13sp" />
-        </LinearLayout>
-
-        <!-- Voice Activation Big Button -->
-        <Button
-            android:id="@+id/btnVoiceListen"
-            android:layout_width="match_parent"
-            android:layout_height="50dp"
-            android:backgroundTint="@color/primary"
-            android:text="🎙️ Tap to Speak (or say 'Hello Life')"
-            android:textColor="#FFFFFF"
-            android:textSize="14sp"
-            android:layout_marginBottom="14dp" />
-
-        <!-- Silent Mode: Text fallback -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Silent Mode (Type discreetly if unsafe to speak):"
-            android:textSize="11sp"
-            android:textColor="@color/text_secondary"
-            android:layout_marginBottom="4dp" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal">
-
-            <EditText
-                android:id="@+id/etMessage"
-                android:layout_width="0dp"
-                android:layout_height="46dp"
-                android:layout_weight="1"
-                android:background="@color/card_bg"
-                android:hint="Type message or 'call Rahul'..."
-                android:inputType="textCapSentences"
-                android:paddingHorizontal="12dp"
-                android:textSize="14sp"
-                android:textColor="@color/text_primary" />
-
-            <Button
-                android:id="@+id/btnSend"
-                android:layout_width="wrap_content"
-                android:layout_height="46dp"
-                android:layout_marginStart="8dp"
-                android:backgroundTint="@color/primary"
-                android:text="Send"
-                android:textColor="#FFFFFF" />
-        </LinearLayout>
-
-    </LinearLayout>
-</ScrollView>
+</LinearLayout>

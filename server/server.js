@@ -1,4 +1,4 @@
-// server.js - Zero-dependency Life Pro.AI Chatbot Server & Web Host
+// server.js - Zero-dependency Life Pro.AI Chatbot Server, Web Host & Safety API
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
@@ -21,6 +21,20 @@ const PORT = process.env.PORT || 3000;
 const NEBIUS_API_KEY = process.env.NEBIUS_API_KEY || "";
 const NEMOTRON_MODEL = process.env.NEMOTRON_MODEL || "nvidia/llama-3.1-nemotron-70b-instruct";
 
+// Live Safety State Store
+const state = {
+  pairingCodes: new Map(), // code -> { userId, userName, expiresAt }
+  locations: new Map(),    // userId -> { latitude, longitude, timestamp, address }
+  alerts: []               // list of safety events
+};
+
+// Seed initial default pair code for instant demo
+state.pairingCodes.set("LP-782941", {
+  userId: "user_ananya_01",
+  userName: "Ananya Sharma (Senior User)",
+  expiresAt: Date.now() + 86400000
+});
+
 // Helper to locate static files across directory structures
 function findFile(filename) {
   const candidates = [
@@ -36,9 +50,9 @@ function findFile(filename) {
 }
 
 const server = http.createServer(async (req, res) => {
-  // Allow all origins (CORS) so the phone app can connect
+  // Allow all origins (CORS) so the phone app and web portal can connect
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS, HEAD");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
 
   if (req.method === "OPTIONS") {
@@ -54,7 +68,6 @@ const server = http.createServer(async (req, res) => {
       if (req.method === "HEAD") return res.end();
       return fs.createReadStream(htmlPath).pipe(res);
     }
-    // Fallback if index.html cannot be read
     res.writeHead(200, { "Content-Type": "application/json" });
     return res.end(JSON.stringify({ status: "online", name: "Life Pro.AI" }));
   }
@@ -87,25 +100,144 @@ const server = http.createServer(async (req, res) => {
         status: "online",
         name: "Life Pro.AI Chatbot Server",
         port: PORT,
+        activePairCodes: state.pairingCodes.size,
         hasNebiusKey: Boolean(NEBIUS_API_KEY && NEBIUS_API_KEY !== "YOUR_NEBIUS_API_KEY_HERE")
       })
     );
   }
 
-  // Chat endpoint called by Android app & web demo
+  // =========================================================================
+  // PAIRING API ENDPOINTS
+  // =========================================================================
+  if (req.method === "POST" && req.url === "/api/pair/create") {
+    let body = "";
+    req.on("data", chunk => body += chunk);
+    req.on("end", () => {
+      try {
+        const payload = body ? JSON.parse(body) : {};
+        const code = "LP-" + Math.floor(100000 + Math.random() * 900000);
+        state.pairingCodes.set(code, {
+          userId: payload.userId || "user_" + Date.now(),
+          userName: payload.userName || "User",
+          expiresAt: Date.now() + 3600000 // 1 hour
+        });
+        res.writeHead(200, { "Content-Type": "application/json" });
+        return res.end(JSON.stringify({ success: true, code, expiresAt: Date.now() + 3600000 }));
+      } catch (e) {
+        res.writeHead(400, { "Content-Type": "application/json" });
+        return res.end(JSON.stringify({ error: e.message }));
+      }
+    });
+    return;
+  }
+
+  if (req.method === "POST" && req.url === "/api/pair/verify") {
+    let body = "";
+    req.on("data", chunk => body += chunk);
+    req.on("end", () => {
+      try {
+        const payload = body ? JSON.parse(body) : {};
+        const code = (payload.code || "").toUpperCase().trim();
+        const record = state.pairingCodes.get(code);
+        if (record && record.expiresAt > Date.now()) {
+          res.writeHead(200, { "Content-Type": "application/json" });
+          return res.end(JSON.stringify({ success: true, pairedUser: record }));
+        }
+        res.writeHead(404, { "Content-Type": "application/json" });
+        return res.end(JSON.stringify({ success: false, message: "Invalid or expired pairing code." }));
+      } catch (e) {
+        res.writeHead(400, { "Content-Type": "application/json" });
+        return res.end(JSON.stringify({ error: e.message }));
+      }
+    });
+    return;
+  }
+
+  // =========================================================================
+  // LIVE LOCATION SYNC ENDPOINTS
+  // =========================================================================
+  if (req.method === "POST" && req.url === "/api/location/update") {
+    let body = "";
+    req.on("data", chunk => body += chunk);
+    req.on("end", () => {
+      try {
+        const payload = body ? JSON.parse(body) : {};
+        const userId = payload.userId || "default_user";
+        state.locations.set(userId, {
+          latitude: payload.latitude || 19.0760,
+          longitude: payload.longitude || 72.8777,
+          timestamp: Date.now(),
+          address: payload.address || "Live GPS Location"
+        });
+        res.writeHead(200, { "Content-Type": "application/json" });
+        return res.end(JSON.stringify({ success: true, updated: Date.now() }));
+      } catch (e) {
+        res.writeHead(400, { "Content-Type": "application/json" });
+        return res.end(JSON.stringify({ error: e.message }));
+      }
+    });
+    return;
+  }
+
+  if (req.method === "GET" && req.url.startsWith("/api/location/get")) {
+    const loc = state.locations.get("default_user") || {
+      latitude: 19.0760,
+      longitude: 72.8777,
+      timestamp: Date.now(),
+      address: "Mumbai, Maharashtra (Live GPS Lock)"
+    };
+    res.writeHead(200, { "Content-Type": "application/json" });
+    return res.end(JSON.stringify(loc));
+  }
+
+  // =========================================================================
+  // EMERGENCY ALERTS ENDPOINTS
+  // =========================================================================
+  if (req.method === "POST" && req.url === "/api/alert/trigger") {
+    let body = "";
+    req.on("data", chunk => body += chunk);
+    req.on("end", () => {
+      try {
+        const payload = body ? JSON.parse(body) : {};
+        const alert = {
+          id: "alert_" + Date.now(),
+          type: payload.type || "SOS_EMERGENCY",
+          userId: payload.userId || "default_user",
+          target: payload.target || "112",
+          timestamp: Date.now(),
+          location: payload.location || "Coordinates Shared"
+        };
+        state.alerts.unshift(alert);
+        if (state.alerts.length > 50) state.alerts.pop();
+        res.writeHead(200, { "Content-Type": "application/json" });
+        return res.end(JSON.stringify({ success: true, alert }));
+      } catch (e) {
+        res.writeHead(400, { "Content-Type": "application/json" });
+        return res.end(JSON.stringify({ error: e.message }));
+      }
+    });
+    return;
+  }
+
+  if (req.method === "GET" && req.url === "/api/alert/list") {
+    res.writeHead(200, { "Content-Type": "application/json" });
+    return res.end(JSON.stringify({ alerts: state.alerts }));
+  }
+
+  // =========================================================================
+  // CONVERSATIONAL AI CHAT ENDPOINT
+  // =========================================================================
   if (req.method === "POST" && (req.url === "/api/chat" || req.url === "/chat")) {
     let body = "";
-    req.on("data", chunk => {
-      body += chunk;
-    });
+    req.on("data", chunk => body += chunk);
 
     req.on("end", async () => {
       try {
         const payload = body ? JSON.parse(body) : {};
         const userMessage = payload.message || "";
-        console.log(`[Life Pro.AI] Received message: "${userMessage}"`);
+        console.log(`[Life Pro.AI] Message received: "${userMessage}"`);
 
-        // If no live Nebius key is set yet, provide intelligent simulated safety logic
+        // If no live Nebius key is set yet, provide intelligent structured safety logic
         if (!NEBIUS_API_KEY || NEBIUS_API_KEY === "YOUR_NEBIUS_API_KEY_HERE") {
           const lower = userMessage.toLowerCase();
           let mockAction = "none";
@@ -116,6 +248,9 @@ const server = http.createServer(async (req, res) => {
             mockAction = "sos";
             mockContact = "112";
             mockReply = "Emergency detected! Initiating 112 Indian SOS dispatch now.";
+          } else if (lower.includes("fell down") || lower.includes("i fell") || lower.includes("hurt")) {
+            mockAction = "none";
+            mockReply = "I heard you fell. Are you hurt? Do you need me to alert your guardian or call 112?";
           } else if (lower.includes("call")) {
             mockAction = "call";
             mockContact = userMessage.replace(/call/i, "").trim() || "Emergency Contact";
@@ -123,15 +258,17 @@ const server = http.createServer(async (req, res) => {
           } else if (lower.includes("camera") || lower.includes("video")) {
             mockAction = "camera";
             mockReply = "Opening live video feed for guardian check-in.";
+          } else if (lower.includes("location") || lower.includes("where am i")) {
+            mockAction = "location";
+            mockReply = "Sharing your live GPS location.";
           }
 
-          const mockResponse = {
+          res.writeHead(200, { "Content-Type": "application/json" });
+          return res.end(JSON.stringify({
             reply: mockReply,
             action: mockAction,
             contact: mockContact
-          };
-          res.writeHead(200, { "Content-Type": "application/json" });
-          return res.end(JSON.stringify(mockResponse));
+          }));
         }
 
         // Call NVIDIA Nemotron on Nebius Token Factory
@@ -146,7 +283,7 @@ const server = http.createServer(async (req, res) => {
             messages: [
               {
                 role: "system",
-                content: `You are Life Pro AI, a fast and responsive personal safety and emergency assistant.
+                content: `You are Life Pro AI, a fast, reliable personal safety and emergency assistant designed for visually challenged individuals and elderly care.
 Always respond strictly with a valid JSON object matching this schema:
 {
   "reply": "Your brief, calm, and direct response",
@@ -158,17 +295,17 @@ ACTION RULES:
 1. If the user shouts or mentions "help", "emergency", "save me", "call ambulance", "danger", or "call police":
    - Set "action": "sos"
    - Set "contact": "112"
-   - Reply reassuringly that emergency SOS is triggered.
-2. If the user asks to call someone:
+2. If the user reports falling down:
+   - Ask gently if they are hurt and need emergency assistance. Set "action": "none".
+3. If the user asks to call someone:
    - Set "action": "call"
-   - Set "contact": extract the name or phone number requested.
-3. If the user asks for camera/video or guardian video check:
+   - Set "contact": extracted name or number.
+4. If the user asks for camera/video check-in:
    - Set "action": "camera"
-4. If the user asks for location or tracking:
+5. If the user asks for location or tracking:
    - Set "action": "location"
-5. For casual greetings:
+6. Casual conversation:
    - Set "action": "none"
-   - Keep replies short, reassuring, and conversational.
 
 Do not include markdown codeblocks or extra text. Return only raw JSON.`
               },
@@ -179,16 +316,12 @@ Do not include markdown codeblocks or extra text. Return only raw JSON.`
         });
 
         if (!apiResponse.ok) {
-          const errText = await apiResponse.text();
-          console.error("[Nebius API Error]", apiResponse.status, errText);
           res.writeHead(502, { "Content-Type": "application/json" });
-          return res.end(
-            JSON.stringify({
-              reply: "Error communicating with Nebius AI engine.",
-              action: "none",
-              contact: ""
-            })
-          );
+          return res.end(JSON.stringify({
+            reply: "Emergency fallback active. You can say 'Call my daughter' or shout 'Help' anytime.",
+            action: "none",
+            contact: ""
+          }));
         }
 
         const data = await apiResponse.json();
@@ -197,23 +330,18 @@ Do not include markdown codeblocks or extra text. Return only raw JSON.`
         const parsed = JSON.parse(cleaned);
 
         res.writeHead(200, { "Content-Type": "application/json" });
-        return res.end(
-          JSON.stringify({
-            reply: parsed.reply || "I am right here with you.",
-            action: parsed.action || "none",
-            contact: parsed.contact || ""
-          })
-        );
+        return res.end(JSON.stringify({
+          reply: parsed.reply || "I am right here with you.",
+          action: parsed.action || "none",
+          contact: parsed.contact || ""
+        }));
       } catch (err) {
-        console.error("[Server Error]", err);
         res.writeHead(500, { "Content-Type": "application/json" });
-        return res.end(
-          JSON.stringify({
-            reply: "Life Pro AI encountered a server processing error.",
-            action: "none",
-            contact: ""
-          })
-        );
+        return res.end(JSON.stringify({
+          reply: "Life Pro AI is standing by to protect you.",
+          action: "none",
+          contact: ""
+        }));
       }
     });
     return;

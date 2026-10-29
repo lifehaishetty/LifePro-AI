@@ -1,0 +1,248 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg_dark"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingHorizontal="24dp"
+        android:paddingVertical="36dp"
+        android:gravity="center_horizontal">
+
+        <!-- App Logo & Shield Badge -->
+        <FrameLayout
+            android:layout_width="72dp"
+            android:layout_height="72dp"
+            android:background="@drawable/badge_bg"
+            android:layout_marginBottom="16dp">
+
+            <ImageView
+                android:layout_width="38dp"
+                android:layout_height="38dp"
+                android:layout_gravity="center"
+                android:src="@drawable/ic_shield"
+                app:tint="@color/violet_light"
+                android:contentDescription="LifePro Logo" />
+        </FrameLayout>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="LifePro.AI"
+            android:textSize="28sp"
+            android:textColor="@color/text_title"
+            android:textStyle="bold"
+            android:fontFamily="sans-serif-black"
+            android:letterSpacing="-0.02" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Voice-first safety companion and emergency guardian for visually challenged and elderly care."
+            android:textSize="14sp"
+            android:textColor="@color/text_muted"
+            android:gravity="center"
+            android:lineSpacingExtra="3dp"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="32dp" />
+
+        <!-- Role Selection Title -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="CHOOSE YOUR ROLE"
+            android:textSize="12sp"
+            android:textColor="@color/text_dim"
+            android:textStyle="bold"
+            android:letterSpacing="0.08"
+            android:layout_marginBottom="12dp" />
+
+        <!-- Role Card: USER -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardRoleUser"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            style="@style/Widget.LifePro.Card.Violet"
+            android:clickable="true"
+            android:focusable="true"
+            android:layout_marginBottom="12dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="18dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="🙋 I am User"
+                        android:textSize="17sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/text_title" />
+
+                    <RadioButton
+                        android:id="@+id/rbUser"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:checked="true"
+                        android:clickable="false"
+                        app:buttonTint="@color/violet_light" />
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Hands-free voice assistant, 10-second Indian 112 SOS, and screen-off fall protection."
+                    android:textSize="13sp"
+                    android:textColor="@color/text_body"
+                    android:layout_marginTop="4dp" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Role Card: GUARDIAN -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardRoleGuardian"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            style="@style/Widget.LifePro.Card"
+            android:clickable="true"
+            android:focusable="true"
+            android:layout_marginBottom="28dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="18dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="🛡️ I am Guardian / Caregiver"
+                        android:textSize="17sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/text_title" />
+
+                    <RadioButton
+                        android:id="@+id/rbGuardian"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:checked="false"
+                        android:clickable="false"
+                        app:buttonTint="@color/violet_light" />
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Family member or doctor monitoring real-time GPS coordinates, receiving emergency alerts, and authorized video checks."
+                    android:textSize="13sp"
+                    android:textColor="@color/text_muted"
+                    android:layout_marginTop="4dp" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Authentication Container -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="SIGN IN"
+            android:textSize="12sp"
+            android:textColor="@color/text_dim"
+            android:textStyle="bold"
+            android:letterSpacing="0.08"
+            android:layout_marginBottom="12dp" />
+
+        <!-- Phone Number Field -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/tilPhone"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            android:hint="Phone Number (+91...)"
+            app:boxBackgroundColor="@color/bg_card"
+            app:boxStrokeColor="@color/border_subtle"
+            app:boxStrokeWidth="1dp"
+            app:hintTextColor="@color/text_muted">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etPhone"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="phone"
+                android:textColor="@color/text_title"
+                android:text="+91 98765 43210"
+                android:textSize="15sp" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- OTP Field (Visible when OTP sent) -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/tilOtp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            android:visibility="gone"
+            android:hint="Enter 6-Digit OTP"
+            app:boxBackgroundColor="@color/bg_card"
+            app:boxStrokeColor="@color/border_subtle"
+            app:hintTextColor="@color/text_muted">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etOtp"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="number"
+                android:textColor="@color/text_title"
+                android:textSize="16sp" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- Primary Phone / OTP Button -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnPhoneAuth"
+            android:layout_width="match_parent"
+            android:layout_height="54dp"
+            style="@style/Widget.LifePro.Button.Primary"
+            android:text="Continue with Phone OTP"
+            android:textSize="15sp"
+            android:layout_marginBottom="12dp" />
+
+        <!-- Google Sign In Button -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnGoogleAuth"
+            android:layout_width="match_parent"
+            android:layout_height="54dp"
+            style="@style/Widget.LifePro.Button.Secondary"
+            android:text="Sign in with Google"
+            android:textSize="15sp"
+            android:layout_marginBottom="24dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="By continuing, you agree to LifePro's Emergency Privacy &amp; Safety Terms."
+            android:textSize="11sp"
+            android:textColor="@color/text_dim"
+            android:gravity="center" />
+
+    </LinearLayout>
+</ScrollView>

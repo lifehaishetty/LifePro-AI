@@ -200,9 +200,11 @@
             android:id="@+id/tilOtp"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
+            android:layout_marginBottom="8dp"
             android:visibility="gone"
             android:hint="Enter 6-Digit OTP"
+            app:helperText="Verification code: 123456 (or any 6-digit code)"
+            app:helperTextTextColor="@color/violet_light"
             app:boxBackgroundColor="@color/bg_card"
             app:boxStrokeColor="@color/border_subtle"
             app:hintTextColor="@color/text_muted">
@@ -215,6 +217,18 @@
                 android:textColor="@color/text_title"
                 android:textSize="16sp" />
         </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- Quick 1-Tap Auto-fill Button (Visible when OTP sent) -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnAutoFillOtp"
+            android:layout_width="match_parent"
+            android:layout_height="44dp"
+            style="@style/Widget.LifePro.Button.Secondary"
+            android:text="⚡ Auto-Fill Code: 123456"
+            android:textColor="@color/violet_light"
+            android:textSize="13sp"
+            android:visibility="gone"
+            android:layout_marginBottom="16dp" />
 
         <!-- Primary Phone / OTP Button -->
         <com.google.android.material.button.MaterialButton

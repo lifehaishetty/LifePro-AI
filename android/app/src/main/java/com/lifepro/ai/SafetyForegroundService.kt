@@ -1,14 +1,18 @@
 package com.lifepro.ai
 
+import android.Manifest
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 
 class SafetyForegroundService : Service() {
 
@@ -21,8 +25,34 @@ class SafetyForegroundService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        val notification = createNotification()
-        startForeground(NOTIFICATION_ID, notification)
+        try {
+            // Android 14 (API 34) strictly requires RECORD_AUDIO to be granted prior to startForeground with type microphone
+            val audioPermissionGranted = ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.RECORD_AUDIO
+            ) == PackageManager.PERMISSION_GRANTED
+
+            if (!audioPermissionGranted) {
+                // If microphone permission is not yet granted, do not start foreground service to prevent SecurityException
+                stopSelf()
+                return START_NOT_STICKY
+            }
+
+            val notification = createNotification()
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE)
+                } else {
+                    startForeground(NOTIFICATION_ID, notification)
+                }
+            } else {
+                startForeground(NOTIFICATION_ID, notification)
+            }
+        } catch (e: Throwable) {
+            e.printStackTrace()
+            stopSelf()
+            return START_NOT_STICKY
+        }
         return START_STICKY
     }
 

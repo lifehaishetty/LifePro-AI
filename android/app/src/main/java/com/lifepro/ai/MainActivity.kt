@@ -134,27 +134,32 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        authManager = AuthManager.getInstance(this)
+        try {
+            authManager = AuthManager.getInstance(this)
 
-        // Session check: If user not logged in, redirect to AuthActivity
-        if (!authManager.isLoggedIn()) {
-            startActivity(Intent(this, AuthActivity::class.java))
-            finish()
-            return
+            // Session check: If user not logged in, redirect to AuthActivity
+            if (!authManager.isLoggedIn()) {
+                startActivity(Intent(this, AuthActivity::class.java))
+                finish()
+                return
+            }
+
+            setContentView(R.layout.activity_main)
+
+            initDependencies()
+            initViews()
+            setupBottomNavigation()
+            setupAssistant()
+            setupGuardianTab()
+            setupContactsTab()
+            setupActivityTab()
+            setupSettingsTab()
+            startBackgroundService()
+            checkAndReportPermissions()
+        } catch (e: Throwable) {
+            e.printStackTrace()
+            Toast.makeText(this, "LifePro initialized with safe fallbacks.", Toast.LENGTH_SHORT).show()
         }
-
-        setContentView(R.layout.activity_main)
-
-        initDependencies()
-        initViews()
-        setupBottomNavigation()
-        setupAssistant()
-        setupGuardianTab()
-        setupContactsTab()
-        setupActivityTab()
-        setupSettingsTab()
-        startBackgroundService()
-        checkAndReportPermissions()
     }
 
     private fun initDependencies() {
@@ -667,46 +672,57 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         checkAndReportPermissions()
         refreshLocationDisplay()
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+            startBackgroundService()
+        }
     }
 
     // =========================================================================
     // VOICE SPEECH RECOGNITION & TTS
     // =========================================================================
     private fun initSpeechRecognizer() {
-        if (SpeechRecognizer.isRecognitionAvailable(this)) {
-            speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this).apply {
-                setRecognitionListener(object : RecognitionListener {
-                    override fun onReadyForSpeech(params: Bundle?) {
-                        tvVoiceStatus.text = "🎤 Hearing speech..."
-                    }
-                    override fun onBeginningOfSpeech() {}
-                    override fun onRmsChanged(rmsdB: Float) {}
-                    override fun onBufferReceived(buffer: ByteArray?) {}
-                    override fun onEndOfSpeech() {
-                        isListening = false
-                        tvVoiceStatus.text = "Processing voice..."
-                    }
-                    override fun onError(error: Int) {
-                        isListening = false
-                        tvVoiceStatus.text = "Ready. Say 'Hello Life'"
-                    }
-                    override fun onResults(results: Bundle?) {
-                        val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                        if (!matches.isNullOrEmpty()) {
-                            val recognized = matches[0]
-                            assistantEngine.processUserInput(recognized)
+        try {
+            if (SpeechRecognizer.isRecognitionAvailable(this)) {
+                speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this).apply {
+                    setRecognitionListener(object : RecognitionListener {
+                        override fun onReadyForSpeech(params: Bundle?) {
+                            tvVoiceStatus.text = "🎤 Hearing speech..."
                         }
-                    }
-                    override fun onPartialResults(partialResults: Bundle?) {}
-                    override fun onEvent(eventType: Int, params: Bundle?) {}
-                })
+                        override fun onBeginningOfSpeech() {}
+                        override fun onRmsChanged(rmsdB: Float) {}
+                        override fun onBufferReceived(buffer: ByteArray?) {}
+                        override fun onEndOfSpeech() {
+                            isListening = false
+                            tvVoiceStatus.text = "Processing voice..."
+                        }
+                        override fun onError(error: Int) {
+                            isListening = false
+                            tvVoiceStatus.text = "Ready. Say 'Hello Life'"
+                        }
+                        override fun onResults(results: Bundle?) {
+                            val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                            if (!matches.isNullOrEmpty()) {
+                                val recognized = matches[0]
+                                assistantEngine.processUserInput(recognized)
+                            }
+                        }
+                        override fun onPartialResults(partialResults: Bundle?) {}
+                        override fun onEvent(eventType: Int, params: Bundle?) {}
+                    })
+                }
             }
+        } catch (e: Throwable) {
+            e.printStackTrace()
         }
     }
 
     private fun toggleSpeechListening() {
         if (isListening) {
-            speechRecognizer?.stopListening()
+            try {
+                speechRecognizer?.stopListening()
+            } catch (e: Throwable) {
+                e.printStackTrace()
+            }
             isListening = false
             tvVoiceStatus.text = "Microphone paused"
         } else {
@@ -714,30 +730,39 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                 requestPermissionsExplicitly()
                 return
             }
-            val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-                putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault())
-                putExtra(RecognizerIntent.EXTRA_PROMPT, "Say 'Hello Life' or what you need...")
+            try {
+                val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                    putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                    putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault())
+                    putExtra(RecognizerIntent.EXTRA_PROMPT, "Say 'Hello Life' or what you need...")
+                }
+                speechRecognizer?.startListening(intent)
+                isListening = true
+                tvVoiceStatus.text = "🎤 Listening..."
+            } catch (e: Throwable) {
+                e.printStackTrace()
+                Toast.makeText(this, "Voice recognition unavailable on this device", Toast.LENGTH_SHORT).show()
             }
-            speechRecognizer?.startListening(intent)
-            isListening = true
-            tvVoiceStatus.text = "🎤 Listening..."
         }
     }
 
     private fun initTextToSpeech() {
-        textToSpeech = TextToSpeech(this, this)
-        textToSpeech?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
-            override fun onStart(utteranceId: String?) {
-                runOnUiThread { btnStopSpeaking.visibility = View.VISIBLE }
-            }
-            override fun onDone(utteranceId: String?) {
-                runOnUiThread { btnStopSpeaking.visibility = View.GONE }
-            }
-            override fun onError(utteranceId: String?) {
-                runOnUiThread { btnStopSpeaking.visibility = View.GONE }
-            }
-        })
+        try {
+            textToSpeech = TextToSpeech(this, this)
+            textToSpeech?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+                override fun onStart(utteranceId: String?) {
+                    runOnUiThread { btnStopSpeaking.visibility = View.VISIBLE }
+                }
+                override fun onDone(utteranceId: String?) {
+                    runOnUiThread { btnStopSpeaking.visibility = View.GONE }
+                }
+                override fun onError(utteranceId: String?) {
+                    runOnUiThread { btnStopSpeaking.visibility = View.GONE }
+                }
+            })
+        } catch (e: Throwable) {
+            e.printStackTrace()
+        }
     }
 
     override fun onInit(status: Int) {
@@ -751,6 +776,10 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     }
 
     private fun startBackgroundService() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            // Android 14 (API 34) forbids starting microphone foreground services before permission is granted
+            return
+        }
         try {
             val serviceIntent = Intent(this, SafetyForegroundService::class.java)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -758,8 +787,8 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             } else {
                 startService(serviceIntent)
             }
-        } catch (e: Exception) {
-            // Ignored
+        } catch (e: Throwable) {
+            e.printStackTrace()
         }
     }
 

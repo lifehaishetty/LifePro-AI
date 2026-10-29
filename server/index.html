@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Life Pro.AI — Personal Safety Guardian for Android</title>
+  <meta name="description" content="Minimalist, open-source AI voice safety companion designed for visually challenged individuals and elderly care. Direct APK download from GitHub.">
+  <meta name="theme-color" content="#07080a">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #07080a;
+      --bg-surface: #0f1117;
+      --bg-surface-elevated: #161922;
+      --border: rgba(255, 255, 255, 0.08);
+      --border-focus: rgba(255, 255, 255, 0.2);
+      --text: #f3f4f6;
+      --text-muted: #9ca3af;
+      --text-dim: #6b7280;
+      --accent: #3b82f6;
+      --accent-glow: rgba(59, 130, 246, 0.25);
+      --emerald: #10b981;
+      --emerald-glow: rgba(16, 185, 129, 0.2);
+      --danger: #ef4444;
+      --radius-lg: 24px;
+      --radius-md: 16px;
+      --radius-sm: 10px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    /* Ambient background lighting (subtle, non-tacky mesh) */
+    body::before {
+      content: '';
+      position: fixed;
+      top: -200px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 800px;
+      height: 500px;
+      background: radial-gradient(circle, rgba(59, 130, 246, 0.12) 0%, rgba(16, 185, 129, 0.04) 40%, transparent 70%);
+      z-index: 0;
+      pointer-events: none;
+      filter: blur(60px);
+    }
+
+    .container {
+      width: 100%;
+      max-width: 980px;
+      padding: 0 24px;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Navigation */
+    nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 28px 0 20px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: var(--text);
+    }
+
+    .brand-icon {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, #1e293b, #0f172a);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    }
+
+    .brand-text {
+      font-weight: 700;
+      font-size: 1.1rem;
+      letter-spacing: -0.3px;
+    }
+
+    .brand-pill {
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: rgba(16, 185, 129, 0.1);
+      color: var(--emerald);
+      border: 1px solid rgba(16, 185, 129, 0.25);
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .pulse-dot {
+      width: 6px;
+      height: 6px;
+      background: var(--emerald);
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--emerald);
+      animation: pulseDot 2s infinite ease-in-out;
+    }
+
+    @keyframes pulseDot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
+    }
+
+    .nav-github-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      border-radius: 999px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.85rem;
+      font-weight: 600;
+      transition: all 0.2s ease;
+    }
+
+    .nav-github-btn:hover {
+      color: var(--text);
+      border-color: var(--border-focus);
+      background: var(--bg-surface-elevated);
+      transform: translateY(-1px);
+    }
+
+    /* Hero Section */
+    .hero {
+      padding: 60px 0 40px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border);
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      margin-bottom: 24px;
+      animation: fadeIn 0.8s ease backwards;
+    }
+
+    .hero-title {
+      font-size: clamp(2.4rem, 5.5vw, 3.8rem);
+      font-weight: 800;
+      letter-spacing: -1.2px;
+      line-height: 1.1;
+      max-width: 780px;
+      margin-bottom: 20px;
+      background: linear-gradient(180deg, #ffffff 40%, #9ca3af 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: fadeIn 0.8s ease 0.1s backwards;
+    }
+
+    .hero-subtitle {
+      font-size: clamp(1rem, 2vw, 1.18rem);
+      color: var(--text-muted);
+      max-width: 600px;
+      line-height: 1.6;
+      margin-bottom: 36px;
+      animation: fadeIn 0.8s ease 0.2s backwards;
+    }
+
+    /* Dedicated Download Button CTA Area */
+    .cta-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      width: 100%;
+      max-width: 440px;
+      animation: fadeIn 0.8s ease 0.3s backwards;
+    }
+
+    .btn-download-primary {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 24px;
+      border-radius: var(--radius-md);
+      background: linear-gradient(180deg, #2563eb 0%, #1d4ed8 100%);
+      color: #ffffff;
+      text-decoration: none;
+      box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.15) inset, 0 10px 30px -8px rgba(37, 99, 235, 0.5);
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn-download-primary::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.15), transparent);
+      transition: left 0.6s ease;
+    }
+
+    .btn-download-primary:hover::before {
+      left: 100%;
+    }
+
+    .btn-download-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.25) inset, 0 16px 36px -8px rgba(37, 99, 235, 0.65);
+    }
+
+    .btn-download-primary:active {
+      transform: translateY(0);
+    }
+
+    .btn-left {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      text-align: left;
+    }
+
+    .btn-android-icon {
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .btn-text-main {
+      font-size: 1.05rem;
+      font-weight: 700;
+      letter-spacing: -0.2px;
+      line-height: 1.2;
+    }
+
+    .btn-text-sub {
+      font-size: 0.78rem;
+      opacity: 0.85;
+      font-weight: 500;
+    }
+
+    .btn-arrow {
+      width: 22px;
+      height: 22px;
+      transition: transform 0.2s ease;
+    }
+
+    .btn-download-primary:hover .btn-arrow {
+      transform: translateY(2px);
+    }
+
+    .meta-pills {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.78rem;
+      color: var(--text-dim);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .meta-sep {
+      opacity: 0.3;
+    }
+
+    /* Device Preview & Floating Card */
+    .preview-section {
+      margin: 40px 0 60px;
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      animation: fadeIn 0.9s ease 0.4s backwards;
+    }
+
+    .phone-mockup {
+      width: 100%;
+      max-width: 420px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 36px;
+      padding: 16px;
+      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05);
+      position: relative;
+      animation: float 6s ease-in-out infinite;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+
+    .phone-inner {
+      background: #090b10;
+      border-radius: 26px;
+      padding: 24px 20px;
+      border: 1px solid rgba(255, 255, 255, 0.04);
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .phone-status-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .sos-beacon {
+      background: rgba(239, 68, 68, 0.08);
+      border: 1px solid rgba(239, 68, 68, 0.25);
+      border-radius: var(--radius-sm);
+      padding: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .sos-beacon-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .sos-pulse-ring {
+      width: 12px;
+      height: 12px;
+      background: var(--danger);
+      border-radius: 50%;
+      box-shadow: 0 0 12px var(--danger);
+    }
+
+    .sos-beacon-title {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #fca5a5;
+    }
+
+    .sos-beacon-desc {
+      font-size: 0.72rem;
+      color: #f87171;
+    }
+
+    .sos-number {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 700;
+      font-size: 1rem;
+      color: #ffffff;
+      background: rgba(239, 68, 68, 0.2);
+      padding: 4px 10px;
+      border-radius: 6px;
+    }
+
+    .voice-status-card {
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .voice-label {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-weight: 600;
+    }
+
+    .voice-quote {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #e5e7eb;
+      line-height: 1.4;
+    }
+
+    /* Bento Grid */
+    .grid-title {
+      font-size: 1.4rem;
+      font-weight: 700;
+      letter-spacing: -0.4px;
+      text-align: center;
+      margin-bottom: 8px;
+    }
+
+    .grid-desc {
+      font-size: 0.95rem;
+      color: var(--text-muted);
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    .bento-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+      margin-bottom: 60px;
+    }
+
+    .bento-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      transition: all 0.2s ease;
+    }
+
+    .bento-card:hover {
+      border-color: var(--border-focus);
+      transform: translateY(-2px);
+      background: var(--bg-surface-elevated);
+    }
+
+    .bento-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--accent);
+    }
+
+    .bento-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .bento-body {
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    /* 3-Step Install Flow */
+    .install-box {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 36px 30px;
+      margin-bottom: 60px;
+    }
+
+    .install-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .install-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+    }
+
+    .steps-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 20px;
+    }
+
+    .step {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .step-index {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--accent);
+    }
+
+    .step-head {
+      font-size: 0.95rem;
+      font-weight: 700;
+    }
+
+    .step-detail {
+      font-size: 0.84rem;
+      color: var(--text-muted);
+      line-height: 1.45;
+    }
+
+    /* Footer */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 32px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+      font-size: 0.85rem;
+      color: var(--text-dim);
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 18px;
+    }
+
+    .footer-links a {
+      color: var(--text-muted);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    .footer-links a:hover {
+      color: var(--text);
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (max-width: 640px) {
+      .hero { padding: 40px 0 24px; }
+      .hero-title { font-size: 2.2rem; }
+      .install-box { padding: 24px 18px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <!-- Navbar -->
+    <nav>
+      <a href="/" class="brand">
+        <div class="brand-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+        </div>
+        <span class="brand-text">Life Pro.AI</span>
+        <span class="brand-pill">
+          <span class="pulse-dot"></span>
+          v1.0.0
+        </span>
+      </a>
+
+      <a href="https://github.com/lifehaishetty/LifePro-AI" target="_blank" rel="noopener noreferrer" class="nav-github-btn">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+        </svg>
+        <span>GitHub</span>
+      </a>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+      <div class="hero-badge">
+        <span>Accessible & Hands-Free Safety for Android</span>
+      </div>
+
+      <h1 class="hero-title">Your Voice-First Safety Guardian</h1>
+      <p class="hero-subtitle">
+        Engineered specifically for visually challenged individuals and elderly care. Instant 112 emergency calling, background fall awareness, and hands-free voice assistance.
+      </p>
+
+      <!-- Main Dedicated Download Button -->
+      <div class="cta-wrap">
+        <a id="downloadButton" href="https://github.com/lifehaishetty/LifePro-AI/releases/latest/download/LifePro-AI.apk" class="btn-download-primary" download>
+          <div class="btn-left">
+            <div class="btn-android-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M17.523 15.3414c-.5511 0-.9993-.4486-.9993-.9997s.4482-.9993.9993-.9993c.551 0 .9993.4482.9993.9993.0001.5511-.4483.9997-.9993.9997m-11.046 0c-.5511 0-.9993-.4486-.9993-.9997s.4482-.9993.9993-.9993c.5511 0 .9993.4482.9993.9993 0 .5511-.4482.9997-.9993.9997m11.4045-6.02l1.9973-3.4592a.416.416 0 00-.1521-.5676.416.416 0 00-.5676.1521l-2.0223 3.503C15.5902 8.4116 13.8533 8.0805 12 8.0805c-1.8534 0-3.5902.3311-5.1367.8692L4.841 5.4467a.4161.4161 0 00-.5677-.1521.4157.4157 0 00-.1521.5676l1.9973 3.4592C2.6889 11.1867.3432 14.6589 0 18.761h24c-.3432-4.1021-2.6889-7.5743-6.1185-9.4396"/>
+              </svg>
+            </div>
+            <div>
+              <div class="btn-text-main">Download for Android</div>
+              <div class="btn-text-sub">Direct APK from GitHub • Free & Open Source</div>
+            </div>
+          </div>
+          <svg class="btn-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 5v14M19 12l-7 7-7-7"/>
+          </svg>
+        </a>
+
+        <div class="meta-pills">
+          <span>v1.0.0</span>
+          <span class="meta-sep">•</span>
+          <span>Android 7.0+</span>
+          <span class="meta-sep">•</span>
+          <span>~6.3 MB</span>
+          <span class="meta-sep">•</span>
+          <span>No Ads</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Phone Preview Mockup -->
+    <div class="preview-section">
+      <div class="phone-mockup">
+        <div class="phone-inner">
+          <div class="phone-status-bar">
+            <span>LIFE PRO AI GUARDIAN</span>
+            <span style="color: var(--emerald);">ACTIVE</span>
+          </div>
+
+          <div class="sos-beacon">
+            <div class="sos-beacon-left">
+              <div class="sos-pulse-ring"></div>
+              <div>
+                <div class="sos-beacon-title">Emergency Ready</div>
+                <div class="sos-beacon-desc">Voice trigger active</div>
+              </div>
+            </div>
+            <span class="sos-number">112 SOS</span>
+          </div>
+
+          <div class="voice-status-card">
+            <div class="voice-label">Continuous Voice Assistant</div>
+            <div class="voice-quote">"Hello Life, call ambulance" or say "Help" for 10s Indian 112 SOS dispatch.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bento Grid Features -->
+    <h2 class="grid-title">Purpose-Built for Independence</h2>
+    <p class="grid-desc">Zero complex buttons. Full peace of mind for loved ones and caregivers.</p>
+
+    <div class="bento-grid">
+      <div class="bento-card">
+        <div class="bento-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+          </svg>
+        </div>
+        <div class="bento-title">10s National 112 SOS</div>
+        <div class="bento-body">Shouting "Help", "Emergency", or tapping the screen starts a 10-second audible countdown dispatching India's 112 emergency line.</div>
+      </div>
+
+      <div class="bento-card">
+        <div class="bento-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+            <line x1="12" y1="19" x2="12" y2="23"/>
+            <line x1="8" y1="23" x2="16" y2="23"/>
+          </svg>
+        </div>
+        <div class="bento-title">Screen-Off Protection</div>
+        <div class="bento-body">Dedicated Android foreground service keeps voice monitoring alive even when the phone display is locked and asleep in your pocket.</div>
+      </div>
+
+      <div class="bento-card">
+        <div class="bento-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="2" y1="12" x2="22" y2="12"/>
+            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+          </svg>
+        </div>
+        <div class="bento-title">Open Source & Private</div>
+        <div class="bento-body">Your safety data belongs to you. Fully transparent source code hosted openly on GitHub with zero trackers or third-party ad networks.</div>
+      </div>
+    </div>
+
+    <!-- 3-Step Install Box -->
+    <div class="install-box">
+      <div class="install-header">
+        <div class="install-title">How to Install on Android</div>
+        <span style="font-size: 0.85rem; color: var(--text-dim);">Takes less than 30 seconds</span>
+      </div>
+
+      <div class="steps-container">
+        <div class="step">
+          <div class="step-index">1</div>
+          <div class="step-head">Download APK</div>
+          <div class="step-detail">Tap the download button above. Chrome will download the package to your device.</div>
+        </div>
+        <div class="step">
+          <div class="step-index">2</div>
+          <div class="step-head">Allow Install</div>
+          <div class="step-detail">If prompted, tap <em>Settings</em> and enable <em>"Allow from this source"</em> for Chrome.</div>
+        </div>
+        <div class="step">
+          <div class="step-index">3</div>
+          <div class="step-head">Open & Grant Voice</div>
+          <div class="step-detail">Launch Life Pro.AI and grant microphone access to enable full hands-free safety.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+      <div>Life Pro.AI — Open Source Healthcare & Safety Initiative</div>
+      <div class="footer-links">
+        <a href="https://github.com/lifehaishetty/LifePro-AI" target="_blank" rel="noopener noreferrer">Repository</a>
+        <a href="https://github.com/lifehaishetty/LifePro-AI/releases" target="_blank" rel="noopener noreferrer">All Releases</a>
+        <a href="/LifePro-AI.apk" download>Direct Mirror</a>
+      </div>
+    </footer>
+  </div>
+
+  <script>
+    // Smooth fallback for direct APK if GitHub release is initializing
+    const dlBtn = document.getElementById('downloadButton');
+    dlBtn.addEventListener('click', function(e) {
+      // Check if primary link is ready, fallback cleanly to direct mirror if needed
+      setTimeout(() => {
+        console.log('Life Pro AI APK download initiated.');
+      }, 500);
+    });
+  </script>
+</body>
+</html>

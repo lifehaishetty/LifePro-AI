@@ -1,4 +1,4 @@
-// server.js - Zero-dependency Life Pro.AI Chatbot Server
+// server.js - Zero-dependency Life Pro.AI Chatbot Server & Web Host
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
@@ -21,6 +21,20 @@ const PORT = process.env.PORT || 3000;
 const NEBIUS_API_KEY = process.env.NEBIUS_API_KEY || "";
 const NEMOTRON_MODEL = process.env.NEMOTRON_MODEL || "nvidia/llama-3.1-nemotron-70b-instruct";
 
+// Helper to locate static files across directory structures
+function findFile(filename) {
+  const candidates = [
+    path.join(__dirname, filename),
+    path.join(__dirname, "public", filename),
+    path.join(__dirname, "..", filename),
+    path.join(__dirname, "..", "public", filename)
+  ];
+  for (const c of candidates) {
+    if (fs.existsSync(c)) return c;
+  }
+  return null;
+}
+
 const server = http.createServer(async (req, res) => {
   // Allow all origins (CORS) so the phone app can connect
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -32,8 +46,39 @@ const server = http.createServer(async (req, res) => {
     return res.end();
   }
 
+  // Serve landing page at / and /index.html
+  if (req.method === "GET" && (req.url === "/" || req.url === "/index.html")) {
+    const htmlPath = findFile("index.html");
+    if (htmlPath) {
+      res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+      return fs.createReadStream(htmlPath).pipe(res);
+    }
+    // Fallback if index.html cannot be read
+    res.writeHead(200, { "Content-Type": "application/json" });
+    return res.end(JSON.stringify({ status: "online", name: "Life Pro.AI" }));
+  }
+
+  // Serve direct APK download
+  if (req.method === "GET" && (req.url === "/LifePro-AI.apk" || req.url === "/download")) {
+    const apkPath = findFile("LifePro-AI.apk");
+    if (apkPath) {
+      const stat = fs.statSync(apkPath);
+      res.writeHead(200, {
+        "Content-Type": "application/vnd.android.package-archive",
+        "Content-Disposition": 'attachment; filename="LifePro-AI.apk"',
+        "Content-Length": stat.size
+      });
+      return fs.createReadStream(apkPath).pipe(res);
+    }
+    // Redirect to GitHub release if local APK not found
+    res.writeHead(302, {
+      Location: "https://github.com/lifehaishetty/LifePro-AI/releases/latest/download/LifePro-AI.apk"
+    });
+    return res.end();
+  }
+
   // Health check endpoint
-  if (req.method === "GET" && (req.url === "/" || req.url === "/health")) {
+  if (req.method === "GET" && (req.url === "/health" || req.url === "/api/health")) {
     res.writeHead(200, { "Content-Type": "application/json" });
     return res.end(
       JSON.stringify({
@@ -45,8 +90,8 @@ const server = http.createServer(async (req, res) => {
     );
   }
 
-  // Chat endpoint called by Android app
-  if (req.method === "POST" && req.url === "/api/chat") {
+  // Chat endpoint called by Android app & web demo
+  if (req.method === "POST" && (req.url === "/api/chat" || req.url === "/chat")) {
     let body = "";
     req.on("data", chunk => {
       body += chunk;
@@ -56,11 +101,10 @@ const server = http.createServer(async (req, res) => {
       try {
         const payload = body ? JSON.parse(body) : {};
         const userMessage = payload.message || "";
-        console.log(`[Life Pro.AI] Received message from phone: "${userMessage}"`);
+        console.log(`[Life Pro.AI] Received message: "${userMessage}"`);
 
-        // If no live Nebius key is set yet, provide an intelligent test simulated reply
+        // If no live Nebius key is set yet, provide intelligent simulated safety logic
         if (!NEBIUS_API_KEY || NEBIUS_API_KEY === "YOUR_NEBIUS_API_KEY_HERE") {
-          console.log("[Life Pro.AI] Returning smart simulation reply (add NEBIUS_API_KEY to .env for live Nemotron)");
           const lower = userMessage.toLowerCase();
           let mockAction = "none";
           let mockContact = "";
@@ -111,16 +155,16 @@ Always respond strictly with a valid JSON object matching this schema:
 ACTION RULES:
 1. If the user shouts or mentions "help", "emergency", "save me", "call ambulance", "danger", or "call police":
    - Set "action": "sos"
-   - Set "contact": "112" (Indian national all-in-one emergency number covering Police, Fire, and Ambulance).
+   - Set "contact": "112"
    - Reply reassuringly that emergency SOS is triggered.
-2. If the user asks to call someone (e.g. "call mom", "call rahul", "call 9876543210"):
+2. If the user asks to call someone:
    - Set "action": "call"
    - Set "contact": extract the name or phone number requested.
 3. If the user asks for camera/video or guardian video check:
    - Set "action": "camera"
 4. If the user asks for location or tracking:
    - Set "action": "location"
-5. For casual greetings like "hello life", "how are you", or walking chatter:
+5. For casual greetings:
    - Set "action": "none"
    - Keep replies short, reassuring, and conversational.
 
@@ -138,7 +182,7 @@ Do not include markdown codeblocks or extra text. Return only raw JSON.`
           res.writeHead(502, { "Content-Type": "application/json" });
           return res.end(
             JSON.stringify({
-              reply: "Error communicating with Nebius AI engine. Please verify your API key.",
+              reply: "Error communicating with Nebius AI engine.",
               action: "none",
               contact: ""
             })
@@ -150,7 +194,6 @@ Do not include markdown codeblocks or extra text. Return only raw JSON.`
         const cleaned = rawContent.replace(/```json/gi, "").replace(/```/g, "").trim();
         const parsed = JSON.parse(cleaned);
 
-        console.log("[Life Pro.AI] Sending reply to phone:", parsed);
         res.writeHead(200, { "Content-Type": "application/json" });
         return res.end(
           JSON.stringify({
@@ -180,10 +223,5 @@ Do not include markdown codeblocks or extra text. Return only raw JSON.`
 });
 
 server.listen(PORT, "0.0.0.0", () => {
-  console.log("==================================================");
-  console.log(` Life Pro.AI Server running on port ${PORT}`);
-  console.log(` Active Nemotron Model: ${NEMOTRON_MODEL}`);
-  console.log(` Health check: http://localhost:${PORT}/health`);
-  console.log(` Chat endpoint: http://localhost:${PORT}/api/chat`);
-  console.log("==================================================");
+  console.log(`Life Pro.AI Server running on port ${PORT}`);
 });

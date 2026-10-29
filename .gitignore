@@ -35,6 +35,8 @@ android/.cxx/
 *.apk
 *.aab
 !public/LifePro-AI.apk
+!server/LifePro-AI.apk
+!LifePro-AI.apk
 
 # OS files
 Thumbs.db

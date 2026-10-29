@@ -1,0 +1,69 @@
+name: Build and Release Android APK
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-apk:
+    name: Build & Release LifePro-AI APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Make Gradle executable
+        run: chmod +x android/gradlew || true
+
+      - name: Build Debug APK
+        working-directory: android
+        run: ./gradlew assembleDebug --stacktrace
+
+      - name: Prepare APK for Release
+        run: |
+          mkdir -p release-output
+          cp android/app/build/outputs/apk/debug/app-debug.apk release-output/LifePro-AI.apk
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: LifePro-AI.apk
+          path: release-output/LifePro-AI.apk
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        if: github.ref == 'refs/heads/main'
+        with:
+          tag_name: v1.0.0
+          name: "Life Pro.AI v1.0.0 - Mobile Android App"
+          body: |
+            ## 📱 Life Pro.AI - Android App Download
+
+            Download and install the **Life Pro.AI** application directly onto your Android mobile phone:
+
+            * 📥 **[Click Here to Download LifePro-AI.apk](https://github.com/lifehaishetty/Life-Ai-Pro-/releases/latest/download/LifePro-AI.apk)**
+
+            ---
+            ### 🚀 Easy Installation Guide:
+            1. Tap the direct download link above on your Android phone.
+            2. When the download completes, tap the file in your notifications or Downloads folder.
+            3. If Android prompts you with *“Install unknown apps”*, tap **Settings** and toggle **Allow from this source**.
+            4. Tap **Install** and open **Life Pro.AI**!
+          files: |
+            release-output/LifePro-AI.apk
+          draft: false
+          prerelease: false

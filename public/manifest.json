@@ -1,0 +1,21 @@
+{
+  "short_name": "LifePro AI",
+  "name": "Life Pro.AI Safety Companion",
+  "icons": [
+    {
+      "src": "https://img.icons8.com/color/192/security-checked--v1.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "https://img.icons8.com/color/512/security-checked--v1.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#0a0f1d",
+  "theme_color": "#2563eb",
+  "display": "standalone",
+  "orientation": "portrait"
+}

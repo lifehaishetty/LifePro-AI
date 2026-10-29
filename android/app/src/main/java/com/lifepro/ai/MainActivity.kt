@@ -36,9 +36,12 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
     // =========================================================================
     // SERVER CONFIGURATION
-    // Connected over USB cable via port reverse forwarding:
+    // Production Vercel Serverless API: https://life-pro-ai.vercel.app/api/chat
+    // Fallback: localhost:3000 (when developing via USB ADB reverse port forwarding)
     // =========================================================================
-    private val SERVER_URL = "http://localhost:3000/api/chat"
+    private val VERCEL_URL = "https://life-pro-ai.vercel.app/api/chat"
+    private val LOCAL_URL = "http://localhost:3000/api/chat"
+    private var SERVER_URL = VERCEL_URL
 
     private val httpClient = OkHttpClient()
     private val PERMISSION_REQUEST_CODE = 101
